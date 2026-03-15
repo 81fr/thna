@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>إدارة البطاقات - تراوف</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all-svg.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- PWA / Mobile App Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00A59B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+
+<body>
+
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <img src="assets/logo.png" alt="TRAOF Logo" style="max-height:50px;">
+        </div>
+        <div class="sidebar-profile">
+            <div class="sidebar-profile-avatar">م</div>
+            <div class="sidebar-profile-name">المشرف</div>
+            <div class="sidebar-profile-role"><i class="fas fa-shield-alt"></i> مدير النظام</div>
+        </div>
+        <div class="nav-section-label">القائمة الرئيسية</div>
+        <ul class="nav-links">
+            <li><a href="index.html"><span class="nav-icon-box"><i class="fas fa-home"></i></span> لوحة التحكم</a></li>
+            <li><a href="cards.html" class="active"><span class="nav-icon-box"><i class="fas fa-credit-card"></i></span>
+                    البطاقات</a></li>
+            <li><a href="wallets.html"><span class="nav-icon-box"><i class="fas fa-wallet"></i></span> المحافظ</a></li>
+            <li><a href="merchants.html"><span class="nav-icon-box"><i class="fas fa-store"></i></span> المتاجر</a></li>
+            <li><a href="orders.html"><span class="nav-icon-box"><i class="fas fa-file-invoice-dollar"></i></span> أوامر
+                    التوريد</a></li>
+            <li><a href="pos.html"><span class="nav-icon-box"><i class="fas fa-cash-register"></i></span> نقطة البيع</a>
+            </li>
+            <li><a href="reports.html"><span class="nav-icon-box"><i class="fas fa-chart-bar"></i></span> التقارير</a>
+            </li>
+        </ul>
+        <div class="nav-section-label">الإدارة</div>
+        <ul class="nav-links" style="flex:0;">
+            <li><a href="users.html"><span class="nav-icon-box"><i class="fas fa-users-cog"></i></span> المستخدمين</a>
+            </li>
+            <li><a href="settings.html"><span class="nav-icon-box"><i class="fas fa-cog"></i></span> الإعدادات</a></li>
+            <li><a href="monitor.html"><span class="nav-icon-box"><i class="fas fa-stethoscope"></i></span> فحص
+                    النظام</a></li>
+            <li><a href="support.html"><span class="nav-icon-box"><i class="fas fa-headset"></i></span> الدعم الفني</a>
+            </li>
+        </ul>
+        <div class="sidebar-bottom">
+
+            <button id="darkModeToggleBtn" class="dark-toggle" onclick="toggleDarkMode()"
+                style="width:100%; text-align:right; margin-bottom:10px; padding:12px 20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.05); color:inherit; cursor:pointer; display:flex; align-items:center; gap:10px; transition:0.3s; font-family:inherit; font-size:0.95rem;">
+                <i id="darkIcon" class="fas fa-moon"></i> المظهر الداكن
+            </button>
+
+            <button class="sidebar-logout"
+                onclick="if(typeof logout==='function')logout();else{localStorage.clear();location.href='login.html';}">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </button>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <h1 style="margin:0;"><i class="fas fa-credit-card"></i> إدارة البطاقات</h1>
+                <button onclick="location.href='print_cards.html'"
+                    style="background:var(--card); border:1px solid var(--border); color:var(--text-primary); padding:8px 15px; border-radius:10px; cursor:pointer; font-family:inherit; font-weight:600; display:flex; align-items:center; gap:8px; transition:0.3s;">
+                    <i class="fas fa-print" style="color:#00A59B;"></i> طباعة البطاقات
+                </button>
+            </div>
+            <div class="user-profile"><span>مرحباً</span>
+                <div class="avatar">م</div>
+            </div>
+        </header>
+
+        <!-- ===== Statistics Bar ===== -->
+        <div class="cards-stats-bar" id="cardsStatsBar">
+            <div class="cards-stat-item">
+                <div class="cards-stat-icon st-total"><i class="fas fa-credit-card"></i></div>
+                <div class="cards-stat-info">
+                    <h4>إجمالي البطاقات</h4>
+                    <div class="stat-num" id="statTotalCards">0</div>
+                </div>
+            </div>
+            <div class="cards-stat-item">
+                <div class="cards-stat-icon st-active"><i class="fas fa-check-circle"></i></div>
+                <div class="cards-stat-info">
+                    <h4>بطاقات نشطة</h4>
+                    <div class="stat-num" id="statActiveCards">0</div>
+                </div>
+            </div>
+            <div class="cards-stat-item">
+                <div class="cards-stat-icon st-frozen"><i class="fas fa-ban"></i></div>
+                <div class="cards-stat-info">
+                    <h4>بطاقات موقوفة</h4>
+                    <div class="stat-num" id="statFrozenCards">0</div>
+                </div>
+            </div>
+            <div class="cards-stat-item">
+                <div class="cards-stat-icon st-balance"><i class="fas fa-coins"></i></div>
+                <div class="cards-stat-info">
+                    <h4>إجمالي الأرصدة</h4>
+                    <div class="stat-num" id="statTotalBalance">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Issue Card Form (collapsible) ===== -->
+        <div class="form-container" id="cardFormContainer">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="margin:0;"><i class="fas fa-plus-circle"></i> <span id="cardFormTitle">إصدار بطاقة
+                        جديدة</span></h3>
+                <button class="secondary" onclick="CardPage.toggleForm()" id="toggleFormBtn"
+                    style="padding:6px 14px; font-size:.82rem;">
+                    <i class="fas fa-chevron-up" id="toggleFormIcon"></i>
+                </button>
+            </div>
+            <div id="cardFormBody">
+                <input type="hidden" id="editingCardId">
+                <div class="cards-form-grid">
+                    <div class="form-group">
+                        <label>رقم البطاقة</label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" id="cardNumInput" placeholder="أدخل الرقم" style="flex:1;" />
+                            <button class="secondary" onclick="Actions.generateCardNum()"
+                                style="padding:8px 14px; white-space:nowrap;">
+                                <i class="fas fa-random"></i> توليد
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>نوع المحفظة</label>
+                        <select id="cardWalletInput"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>اسم المستفيد</label>
+                        <select id="cardBeneficiaryInput"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>الرصيد الأولي</label>
+                        <input type="number" id="cardBalanceInput" placeholder="0.00" />
+                    </div>
+                    <div class="form-group">
+                        <label>كلمة مرور البطاقة (PIN)</label>
+                        <input type="password" id="cardPinInput" placeholder="4 أرقام" maxlength="6" />
+                    </div>
+                    <div class="form-group">
+                        <label>تاريخ الانتهاء</label>
+                        <input type="date" id="cardExpiryInput" />
+                    </div>
+                    <div class="form-group">
+                        <label>الحالة</label>
+                        <select id="cardStatusInput">
+                            <option value="نشط">نشط</option>
+                            <option value="موقوف">موقوف</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:8px;">
+                    <button id="saveCardBtn" onclick="Actions.addCard()"><i class="fas fa-plus"></i> إصدار
+                        البطاقة</button>
+                    <button id="cancelCardEditBtn" onclick="Actions.cancelCardEdit()"
+                        style="background:#dc3545; display:none;"><i class="fas fa-times"></i> إلغاء</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Search & Filter Bar ===== -->
+        <div class="cards-filter-bar">
+            <div class="filter-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="cardsSearchInput" placeholder="ابحث برقم البطاقة أو اسم المستفيد..."
+                    oninput="CardPage.filterCards()">
+            </div>
+            <select id="cardsFilterWallet" onchange="CardPage.filterCards()">
+                <option value="">كل المحافظ</option>
+            </select>
+            <select id="cardsFilterStatus" onchange="CardPage.filterCards()">
+                <option value="">كل الحالات</option>
+                <option value="نشط">نشط</option>
+                <option value="موقوف">موقوف</option>
+            </select>
+            <button class="secondary" onclick="CardPage.exportCSV()"
+                style="padding:8px 14px; font-size:.82rem; white-space:nowrap;">
+                <i class="fas fa-file-export"></i> تصدير
+            </button>
+            <div style="width: 1px; height: 24px; background: var(--border); margin: 0 8px;"></div>
+            <button class="primary" onclick="CardPage.openBatchBalanceModal('deposit')"
+                style="padding:8px 14px; font-size:.82rem; white-space:nowrap; background: linear-gradient(135deg, #10b981, #059669); border-color: transparent;">
+                <i class="fas fa-arrow-down"></i> تغذية للكل
+            </button>
+            <button class="primary" onclick="CardPage.openBatchBalanceModal('withdraw')"
+                style="padding:8px 14px; font-size:.82rem; white-space:nowrap; background: linear-gradient(135deg, #ef4444, #dc2626); border-color: transparent;">
+                <i class="fas fa-arrow-up"></i> سحب من الكل
+            </button>
+        </div>
+
+        <!-- ===== Visual Cards Grid ===== -->
+        <div class="cards-visual-grid" id="cardsVisualGrid"></div>
+
+        <!-- ===== Card Detail Modal ===== -->
+        <div class="card-detail-overlay" id="cardDetailOverlay" onclick="if(event.target===this)CardPage.closeDetail()">
+            <div class="card-detail-modal">
+                <div class="cd-card-preview" id="cdPreview">
+                    <button class="cd-close-btn" onclick="CardPage.closeDetail()"><i class="fas fa-times"></i></button>
+                    <div class="cd-header-row">
+                        <span class="cd-wallet-badge" id="cdWallet"></span>
+                        <span class="cd-status-badge" id="cdStatus"></span>
+                    </div>
+                    <div class="cd-card-number" id="cdNumber">0000 0000</div>
+                    <div class="cd-info-row">
+                        <span class="cd-beneficiary-name" id="cdBeneficiary">-</span>
+                        <div class="cd-balance-box">
+                            <small>الرصيد المتاح</small>
+                            <div class="cd-balance-val" id="cdBalance">0.00 ريال</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cd-modal-body">
+                    <!-- Card Info -->
+                    <h4 class="cd-section-title"><i class="fas fa-info-circle"></i> معلومات البطاقة</h4>
+                    <table class="cd-info-table" id="cdInfoTable">
+                        <tr>
+                            <td>رقم الهوية</td>
+                            <td id="cdIdentity">-</td>
+                        </tr>
+                        <tr>
+                            <td>تاريخ الإصدار</td>
+                            <td id="cdIssueDate">-</td>
+                        </tr>
+                        <tr>
+                            <td>تاريخ الانتهاء</td>
+                            <td id="cdExpiry">-</td>
+                        </tr>
+                    </table>
+
+                    <!-- Operations -->
+                    <h4 class="cd-section-title"><i class="fas fa-th-large"></i> العمليات على البطاقة</h4>
+                    <div class="cd-ops-grid">
+                        <div class="cd-op-item" onclick="CardPage.openBalanceModal('deposit')">
+                            <div class="cd-op-icon op-green"><i class="fas fa-arrow-down"></i></div>
+                            <span class="cd-op-label">تغذية<br>البطاقة</span>
+                        </div>
+                        <div class="cd-op-item" onclick="CardPage.openBalanceModal('withdraw')">
+                            <div class="cd-op-icon op-red"><i class="fas fa-arrow-up"></i></div>
+                            <span class="cd-op-label">سحب<br>رصيد</span>
+                        </div>
+                        <div class="cd-op-item" onclick="CardPage.toggleStatus()">
+                            <div class="cd-op-icon op-orange" id="cdToggleIcon"><i class="fas fa-ban"></i></div>
+                            <span class="cd-op-label" id="cdToggleLabel">تجميد<br>البطاقة</span>
+                        </div>
+                        <div class="cd-op-item" onclick="CardPage.copyNumber()">
+                            <div class="cd-op-icon op-cyan"><i class="fas fa-copy"></i></div>
+                            <span class="cd-op-label">نسخ<br>الرقم</span>
+                        </div>
+                        <div class="cd-op-item" onclick="CardPage.changePin()">
+                            <div class="cd-op-icon op-purple"><i class="fas fa-key"></i></div>
+                            <span class="cd-op-label">تغيير<br>كلمة المرور</span>
+                        </div>
+                        <div class="cd-op-item" onclick="CardPage.editFromModal()">
+                            <div class="cd-op-icon op-blue"><i class="fas fa-edit"></i></div>
+                            <span class="cd-op-label">تعديل<br>البطاقة</span>
+                        </div>
+                        <div class="cd-op-item" onclick="CardPage.renameCard()">
+                            <div class="cd-op-icon op-teal"><i class="fas fa-tag"></i></div>
+                            <span class="cd-op-label">إعادة<br>تسمية</span>
+                        </div>
+                        <div class="cd-op-item" onclick="CardPage.transferBalance()">
+                            <div class="cd-op-icon op-ink"><i class="fas fa-exchange-alt"></i></div>
+                            <span class="cd-op-label">تحويل<br>رصيد</span>
+                        </div>
+                        <div class="cd-op-item"
+                            onclick="var cId = CardPage.currentCardId; if(cId) window.location.href='print_cards.html?id='+cId">
+                            <div class="cd-op-icon op-teal"><i class="fas fa-print"></i></div>
+                            <span class="cd-op-label">طباعة<br>البطاقة</span>
+                        </div>
+                        <div class="cd-op-item" onclick="CardPage.deleteFromModal()">
+                            <div class="cd-op-icon op-red"><i class="fas fa-trash-alt"></i></div>
+                            <span class="cd-op-label">حذف<br>البطاقة</span>
+                        </div>
+                    </div>
+
+                    <!-- Transactions -->
+                    <h4 class="cd-section-title"><i class="fas fa-history"></i> آخر العمليات</h4>
+                    <div class="cd-transactions-list" id="cdTransactions"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Balance Operation Modal ===== -->
+        <div class="card-detail-overlay" id="balanceModalOverlay" style="z-index: 1050;"
+            onclick="if(event.target===this)CardPage.closeBalanceModal()">
+            <div class="card-detail-modal" style="max-width:400px; padding:0;">
+                <div class="cd-modal-body" style="padding:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px; width:100%; border-bottom:1px solid #eee; padding-bottom:15px;"
+                            id="balanceModalTitle">
+                            <i class="fas fa-coins"></i> عملية رصيد
+                        </h3>
+                    </div>
+
+                    <input type="hidden" id="balanceOpType" value="deposit">
+
+                    <div class="form-group" style="text-align:right;">
+                        <label>المبلغ (ريال)</label>
+                        <input type="number" id="balanceOpAmount" placeholder="0.00" min="0.01" step="0.01"
+                            style="width:100%; padding:10px; border-radius:10px; border:1px solid #ccc;">
+                    </div>
+
+                    <div class="form-group" style="margin-top:15px; text-align:right;">
+                        <label>السبب / البيان</label>
+                        <input type="text" id="balanceOpReason" placeholder="مثال: تغذية نقدية..."
+                            style="width:100%; padding:10px; border-radius:10px; border:1px solid #ccc;">
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-top:25px;">
+                        <button class="primary" style="flex:1; border-radius:10px; padding:12px;"
+                            onclick="CardPage.submitBalanceOp()" id="balanceOpSubmitBtn">تأكيد</button>
+                        <button class="secondary"
+                            style="flex:1; border-radius:10px; padding:12px; background:#f1f5f9; color:#334155; border:none;"
+                            onclick="CardPage.closeBalanceModal()">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Batch Balance Operation Modal ===== -->
+        <div class="card-detail-overlay" id="batchBalanceModalOverlay" style="z-index: 1050;"
+            onclick="if(event.target===this)CardPage.closeBatchBalanceModal()">
+            <div class="card-detail-modal" style="max-width:400px; padding:0;">
+                <div class="cd-modal-body" style="padding:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px; width:100%; border-bottom:1px solid #eee; padding-bottom:15px;"
+                            id="batchBalanceModalTitle">
+                            <i class="fas fa-layer-group"></i> عملية جماعية
+                        </h3>
+                    </div>
+
+                    <div
+                        style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.4); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; color: #b45309;">
+                        <i class="fas fa-exclamation-triangle"></i> سيتم تطبيق هذه العملية على <strong
+                            id="batchCardsCount">0</strong> بطاقة نشطة حالياً.
+                    </div>
+
+                    <input type="hidden" id="batchBalanceOpType" value="deposit">
+
+                    <div class="form-group" style="text-align:right;">
+                        <label>المبلغ لكل بطاقة (ريال)</label>
+                        <input type="number" id="batchBalanceOpAmount" placeholder="0.00" min="0.01" step="0.01"
+                            style="width:100%; padding:10px; border-radius:10px; border:1px solid #ccc;">
+                    </div>
+
+                    <div class="form-group" style="margin-top:15px; text-align:right;">
+                        <label>السبب / البيان</label>
+                        <input type="text" id="batchBalanceOpReason" placeholder="مثال: تغذية جماعية..."
+                            style="width:100%; padding:10px; border-radius:10px; border:1px solid #ccc;">
+                    </div>
+
+                    <div style="display:flex; gap:10px; margin-top:25px;">
+                        <button class="primary" style="flex:1; border-radius:10px; padding:12px;"
+                            onclick="CardPage.submitBatchBalanceOp()" id="batchBalanceOpSubmitBtn">تأكيد</button>
+                        <button class="secondary"
+                            style="flex:1; border-radius:10px; padding:12px; background:#f1f5f9; color:#334155; border:none;"
+                            onclick="CardPage.closeBatchBalanceModal()">إلغاء</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="main-footer">
+            <p>صنع في تراؤف</p>
+            <img src="assets/logo.png" alt="TRAOF Logo">
+        </footer>
+    </main>
+
+    <script src="script.js"></script>
+    <script>
+        /* ===== Card Page Controller ===== */
+        const CardPage = {
+            currentCardId: null,
+            formOpen: true,
+
+            // Wallet gradient colors mapped by name
+            walletGradients: [
+                'linear-gradient(135deg, #1a1d27, #00A59B)',
+                'linear-gradient(135deg, #1a1d27, #8b5cf6)',
+                'linear-gradient(135deg, #0f172a, #3b82f6)',
+                'linear-gradient(135deg, #1a1d27, #ec4899)',
+                'linear-gradient(135deg, #1e293b, #f59e0b)',
+                'linear-gradient(135deg, #1a1d27, #ef4444)',
+                'linear-gradient(135deg, #0c4a6e, #06b6d4)',
+                'linear-gradient(135deg, #1a1d27, #8CC240)',
+            ],
+
+            getGradient(walletName) {
+                const wallets = Storage.get('wallets') || [];
+                const idx = wallets.findIndex(w => w.name === walletName);
+                return this.walletGradients[idx >= 0 ? (idx % this.walletGradients.length) : 0];
+            },
+
+            init() {
+                this.loadStats();
+                this.loadGrid();
+                this.populateFilterWallets();
+            },
+
+            loadStats() {
+                const cards = Storage.get('cards') || [];
+                const total = cards.length;
+                const active = cards.filter(c => c.status === 'نشط' || c.status === 'Active').length;
+                const frozen = total - active;
+                const balance = cards.reduce((s, c) => s + Number(c.balance || 0), 0);
+
+                document.getElementById('statTotalCards').textContent = total;
+                document.getElementById('statActiveCards').textContent = active;
+                document.getElementById('statFrozenCards').textContent = frozen;
+                document.getElementById('statTotalBalance').textContent = balance.toLocaleString('ar-SA') + ' ريال';
+            },
+
+            populateFilterWallets() {
+                const wallets = Storage.get('wallets') || [];
+                const sel = document.getElementById('cardsFilterWallet');
+                wallets.forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = w.name;
+                    opt.textContent = w.name;
+                    sel.appendChild(opt);
+                });
+            },
+
+            loadGrid() {
+                const cards = Storage.get('cards') || [];
+                const grid = document.getElementById('cardsVisualGrid');
+
+                // Apply filters
+                const search = (document.getElementById('cardsSearchInput').value || '').trim().toLowerCase();
+                const walletFilter = document.getElementById('cardsFilterWallet').value;
+                const statusFilter = document.getElementById('cardsFilterStatus').value;
+
+                const filtered = cards.filter(card => {
+                    const matchSearch = !search ||
+                        card.number.toLowerCase().includes(search) ||
+                        (card.beneficiary || '').toLowerCase().includes(search) ||
+                        (card.identity || '').toLowerCase().includes(search);
+                    const matchWallet = !walletFilter || card.wallet === walletFilter;
+                    const matchStatus = !statusFilter || card.status === statusFilter ||
+                        (statusFilter === 'نشط' && card.status === 'Active');
+                    return matchSearch && matchWallet && matchStatus;
+                });
+
+                if (filtered.length === 0) {
+                    grid.innerHTML = `
+                        <div class="cards-empty-state" style="grid-column:1/-1;">
+                            <i class="fas fa-credit-card"></i>
+                            <h3>${search || walletFilter || statusFilter ? 'لا توجد نتائج مطابقة' : 'لا توجد بطاقات'}</h3>
+                            <p>${search || walletFilter || statusFilter ? 'جرب تغيير معايير البحث' : 'ابدأ بإصدار بطاقتك الأولى من النموذج أعلاه'}</p>
+                        </div>`;
+                    return;
+                }
+
+                grid.innerHTML = filtered.map(card => {
+                    const isActive = card.status === 'نشط' || card.status === 'Active';
+                    const gradient = this.getGradient(card.wallet);
+                    const displayNum = card.number.replace(/(\d{4})(?=\d)/g, '$1 ');
+                    return `
+                    <div class="card-visual" onclick="CardPage.showDetail(${card.id})">
+                        <div class="card-visual-top" style="background:${gradient}">
+                            <div class="cv-header">
+                                <span class="cv-wallet-name"><i class="fas fa-wallet"></i> ${card.wallet || '-'}</span>
+                                <span class="cv-status ${isActive ? 'active' : 'frozen'}">${isActive ? '● نشط' : '● موقوف'}</span>
+                            </div>
+                            <div class="cv-number">${displayNum}</div>
+                            <div class="cv-bottom-row">
+                                <span class="cv-beneficiary"><i class="fas fa-user"></i> ${card.beneficiary || 'غير محدد'}</span>
+                                <div class="cv-balance">
+                                    <small>الرصيد</small>
+                                    <strong>${Number(card.balance || 0).toLocaleString('ar-SA')} ريال</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-visual-bottom">
+                            <span class="cv-id-label" style="display:flex; flex-direction:column; gap:6px;">
+                                <span><i class="fas fa-id-card"></i> <strong>الهوية:</strong> ${card.identity || '-'}</span>
+                                <span class="cv-hint"><i class="fas fa-mouse-pointer"></i> اضغط للخيارات</span>
+                            </span>
+                            <div class="card-visual-actions" onclick="event.stopPropagation()">
+                                <button class="cv-btn-edit" title="تعديل" onclick="Actions.editCard(${card.id})"><i class="fas fa-pen"></i></button>
+                                <button class="cv-btn-del" title="حذف" onclick="Actions.deleteCard(${card.id})"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('');
+            },
+
+            filterCards() {
+                this.loadGrid();
+            },
+
+            showDetail(id) {
+                const cards = Storage.get('cards') || [];
+                const card = cards.find(c => c.id == id);
+                if (!card) return;
+
+                this.currentCardId = id;
+                const isActive = card.status === 'نشط' || card.status === 'Active';
+                const gradient = this.getGradient(card.wallet);
+                const displayNum = card.number.replace(/(\d{4})(?=\d)/g, '$1 ');
+
+                // Set preview
+                document.getElementById('cdPreview').style.background = gradient;
+                document.getElementById('cdWallet').innerHTML = '<img src="assets/logo.png" style="height:18px; filter: brightness(0) invert(1);" alt="">';
+                const statusEl = document.getElementById('cdStatus');
+                statusEl.textContent = isActive ? '● نشط' : '● موقوف';
+                statusEl.className = 'cd-status-badge ' + (isActive ? 'active' : 'frozen');
+                document.getElementById('cdNumber').textContent = displayNum;
+                document.getElementById('cdBeneficiary').innerHTML = '<i class="fas fa-user"></i> ' + (card.beneficiary || '-');
+                document.getElementById('cdBalance').textContent = Number(card.balance || 0).toLocaleString('ar-SA') + ' ريال';
+
+                // Info
+                document.getElementById('cdIdentity').textContent = card.identity || '-';
+                document.getElementById('cdIssueDate').textContent = card.issueDate || new Date(card.id).toLocaleDateString('ar-SA');
+                document.getElementById('cdExpiry').textContent = card.expiry || '-';
+
+                // Toggle button label
+                const toggleLabel = document.getElementById('cdToggleLabel');
+                const toggleIcon = document.getElementById('cdToggleIcon');
+                if (isActive) {
+                    toggleLabel.innerHTML = 'تجميد<br>البطاقة';
+                    toggleIcon.innerHTML = '<i class="fas fa-ban"></i>';
+                    toggleIcon.className = 'cd-op-icon op-orange';
+                } else {
+                    toggleLabel.innerHTML = 'تفعيل<br>البطاقة';
+                    toggleIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                    toggleIcon.className = 'cd-op-icon op-green';
+                }
+
+                // Transactions
+                const transactions = Storage.get('transactions') || [];
+                const txList = transactions.filter(t => t.card === card.number).slice(-10).reverse();
+                const txContainer = document.getElementById('cdTransactions');
+                if (txList.length === 0) {
+                    txContainer.innerHTML = '<div class="cd-tx-empty"><i class="fas fa-inbox"></i><br>لا توجد عمليات</div>';
+                } else {
+                    txContainer.innerHTML = txList.map(t => `
+                        <div class="cd-tx-item">
+                            <div>
+                                <div class="tx-merchant">${t.merchant}</div>
+                                <div class="tx-date">${t.date}</div>
+                            </div>
+                            <span class="tx-amount">-${Number(t.amount).toLocaleString('ar-SA')} ريال</span>
+                        </div>
+                    `).join('');
+                }
+
+
+                document.getElementById('cardDetailOverlay').classList.add('show');
+
+            },
+
+            closeDetail() {
+                document.getElementById('cardDetailOverlay').classList.remove('show');
+                this.currentCardId = null;
+            },
+
+            openBalanceModal(type) {
+                const card = this._getCard();
+                if (!card) return;
+
+                document.getElementById('balanceOpType').value = type;
+                document.getElementById('balanceOpAmount').value = '';
+                document.getElementById('balanceOpReason').value = '';
+
+                const title = document.getElementById('balanceModalTitle');
+                const btn = document.getElementById('balanceOpSubmitBtn');
+
+                if (type === 'deposit') {
+                    title.innerHTML = '<i class="fas fa-arrow-down" style="color:#10b981;"></i> تغذية البطاقة';
+                    btn.innerHTML = 'تأكيد التغذية';
+                    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                } else {
+                    title.innerHTML = '<i class="fas fa-arrow-up" style="color:#ef4444;"></i> سحب رصيد';
+                    btn.innerHTML = 'تأكيد السحب';
+                    btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                }
+
+                document.getElementById('balanceModalOverlay').classList.add('show');
+            },
+
+            closeBalanceModal() {
+                document.getElementById('balanceModalOverlay').classList.remove('show');
+            },
+
+            submitBalanceOp() {
+                const card = this._getCard();
+                if (!card) return;
+
+                const type = document.getElementById('balanceOpType').value;
+                const amount = parseFloat(document.getElementById('balanceOpAmount').value);
+                const reason = document.getElementById('balanceOpReason').value.trim();
+
+                if (!amount || isNaN(amount) || amount <= 0) {
+                    return showToast('يرجى إدخال مبلغ صحيح', 'error');
+                }
+                if (!reason) {
+                    return showToast('يرجى إدخال سبب العملية', 'error');
+                }
+
+                const cards = Storage.get('cards') || [];
+                const c = cards.find(x => x.id == card.id);
+                if (!c) return;
+
+                if (type === 'withdraw' && amount > Number(c.balance)) {
+                    return showToast('الرصيد غير كافي للسحب', 'error');
+                }
+
+                // Wallet Logic
+                const wallets = Storage.get('wallets') || [];
+                const walletIdx = wallets.findIndex(w => w.name === c.wallet);
+                if (walletIdx !== -1) {
+                    if (type === 'deposit') {
+                        if (wallets[walletIdx].funds < amount) {
+                            return showToast('رصيد المحفظة المرتبطة غير كافٍ لتغذية البطاقة', 'error');
+                        }
+                        wallets[walletIdx].funds -= amount;
+                        if (!wallets[walletIdx].history) wallets[walletIdx].history = [];
+                        wallets[walletIdx].history.push({
+                            date: new Date().toLocaleString('ar-SA'),
+                            op: 'تغذية بطاقة ' + (c.masked || c.number),
+                            amount: amount,
+                            type: 'out'
+                        });
+                    } else {
+                        // Withdraw from card -> returns to wallet
+                        wallets[walletIdx].funds += amount;
+                        if (!wallets[walletIdx].history) wallets[walletIdx].history = [];
+                        wallets[walletIdx].history.push({
+                            date: new Date().toLocaleString('ar-SA'),
+                            op: 'تسوية (استرداد) من بطاقة ' + (c.masked || c.number),
+                            amount: amount,
+                            type: 'in'
+                        });
+                    }
+                    Storage.set('wallets', wallets);
+                } else if (type === 'deposit' && c.wallet) {
+                    return showToast('لم يتم العثور على المحفظة المرتبطة لخصم الرصيد!', 'error');
+                }
+
+                // Update balance
+                if (type === 'deposit') {
+                    c.balance = Number(c.balance || 0) + amount;
+                } else {
+                    c.balance = Number(c.balance || 0) - amount;
+                }
+
+                // Record transaction
+                const transactions = Storage.get('transactions') || [];
+                transactions.push({
+                    id: Date.now(),
+                    date: new Date().toLocaleDateString('ar-SA') + ' ' + new Date().toLocaleTimeString('ar-SA'),
+                    amount: type === 'withdraw' ? -amount : amount,
+                    merchant: type === 'deposit' ? 'تغذية رصيد من المحفظة' : 'سحب رصيد للمحفظة',
+                    card: c.number,
+                    reason: reason,
+                    type: type
+                });
+
+                Storage.set('cards', cards);
+                Storage.set('transactions', transactions);
+
+                showToast(`تم ${type === 'deposit' ? 'تغذية' : 'سحب'} ${amount.toLocaleString('ar-SA')} ريال بنجاح`, 'success');
+
+                this.closeBalanceModal();
+                this.refreshAll();
+                this.showDetail(c.id);
+            },
+
+            openBatchBalanceModal(type) {
+                const cards = Storage.get('cards') || [];
+                // Only consider active cards for batch operations
+                const activeCards = cards.filter(c => c.status === 'نشط' || c.status === 'Active');
+
+                if (activeCards.length === 0) {
+                    return showToast('لا توجد بطاقات نشطة لتطبيق العملية', 'error');
+                }
+
+                document.getElementById('batchCardsCount').textContent = activeCards.length;
+                document.getElementById('batchBalanceOpType').value = type;
+                document.getElementById('batchBalanceOpAmount').value = '';
+                document.getElementById('batchBalanceOpReason').value = '';
+
+                const title = document.getElementById('batchBalanceModalTitle');
+                const btn = document.getElementById('batchBalanceOpSubmitBtn');
+
+                if (type === 'deposit') {
+                    title.innerHTML = '<i class="fas fa-arrow-down" style="color:#10b981;"></i> تغذية جماعية';
+                    btn.innerHTML = 'تأكيد التغذية الجماعية';
+                    btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                } else {
+                    title.innerHTML = '<i class="fas fa-arrow-up" style="color:#ef4444;"></i> سحب رصيد جماعي';
+                    btn.innerHTML = 'تأكيد السحب الجماعي';
+                    btn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                }
+
+                document.getElementById('batchBalanceModalOverlay').classList.add('show');
+            },
+
+            closeBatchBalanceModal() {
+                document.getElementById('batchBalanceModalOverlay').classList.remove('show');
+            },
+
+            submitBatchBalanceOp() {
+                const type = document.getElementById('batchBalanceOpType').value;
+                const amount = parseFloat(document.getElementById('batchBalanceOpAmount').value);
+                const reason = document.getElementById('batchBalanceOpReason').value.trim();
+
+                if (!amount || isNaN(amount) || amount <= 0) {
+                    return showToast('يرجى إدخال مبلغ صحيح', 'error');
+                }
+                if (!reason) {
+                    return showToast('يرجى إدخال سبب العملية الجماعية', 'error');
+                }
+
+                const cards = Storage.get('cards') || [];
+                const transactions = Storage.get('transactions') || [];
+                const wallets = Storage.get('wallets') || [];
+
+                let successCount = 0;
+                let failCount = 0;
+
+                for (let i = 0; i < cards.length; i++) {
+                    const c = cards[i];
+                    if (c.status !== 'نشط' && c.status !== 'Active') continue;
+
+                    if (type === 'withdraw' && amount > Number(c.balance || 0)) {
+                        failCount++;
+                        continue; // skip this card because not enough balance
+                    }
+
+                    // Check wallet balance for deposit
+                    let wIdx = -1;
+                    if (c.wallet) {
+                        wIdx = wallets.findIndex(w => w.name === c.wallet);
+                    }
+
+                    if (type === 'deposit') {
+                        if (wIdx !== -1 && wallets[wIdx].funds < amount) {
+                            failCount++;
+                            continue; // skip because wallet doesn't have enough balance
+                        }
+                    }
+
+                    // Process Wallet
+                    if (wIdx !== -1) {
+                        if (type === 'deposit') {
+                            wallets[wIdx].funds -= amount;
+                            if (!wallets[wIdx].history) wallets[wIdx].history = [];
+                            wallets[wIdx].history.push({
+                                date: new Date().toLocaleString('ar-SA'),
+                                op: 'تغذية جماعية للبطاقة ' + (c.masked || c.number),
+                                amount: amount,
+                                type: 'out'
+                            });
+                        } else {
+                            wallets[wIdx].funds += amount;
+                            if (!wallets[wIdx].history) wallets[wIdx].history = [];
+                            wallets[wIdx].history.push({
+                                date: new Date().toLocaleString('ar-SA'),
+                                op: 'استرداد جماعي من بطاقة ' + (c.masked || c.number),
+                                amount: amount,
+                                type: 'in'
+                            });
+                        }
+                    }
+
+                    // Update balance
+                    if (type === 'deposit') {
+                        c.balance = Number(c.balance || 0) + amount;
+                    } else {
+                        c.balance = Number(c.balance || 0) - amount;
+                    }
+
+                    // Record transaction
+                    transactions.push({
+                        id: Date.now() + i, // ensure unique ID
+                        date: new Date().toLocaleDateString('ar-SA') + ' ' + new Date().toLocaleTimeString('ar-SA'),
+                        amount: type === 'withdraw' ? -amount : amount,
+                        merchant: type === 'deposit' ? 'تغذية جماعية من المحفظة' : 'سحب جماعي للمحفظة',
+                        card: c.number,
+                        reason: reason,
+                        type: type
+                    });
+
+                    successCount++;
+                }
+
+                if (successCount === 0 && type === 'withdraw') {
+                    return showToast('لم تتم أي عملية سحب (الأرصدة غير كافية)', 'error');
+                }
+                if (successCount === 0 && type === 'deposit') {
+                    return showToast('لم تتم أي عملية إيداع (أرصدة المحافظ غير كافية)', 'error');
+                }
+
+                Storage.set('cards', cards);
+                Storage.set('wallets', wallets);
+                Storage.set('transactions', transactions);
+
+                const typeStr = type === 'deposit' ? 'تغذية' : 'سحب';
+                let msg = `تمت عملية ال${typeStr} لعدد ${successCount} بطاقة بنجاح.`;
+                if (failCount > 0) msg += ` (فشلت لـ ${failCount} بطاقة لعدم كفاية الرصيد)`;
+
+                showToast(msg, failCount > 0 ? 'warning' : 'success');
+
+                this.closeBatchBalanceModal();
+                this.refreshAll();
+            },
+
+            toggleStatus() {
+                const card = this._getCard();
+                if (!card) return;
+                const isActive = card.status === 'نشط' || card.status === 'Active';
+                const action = isActive ? 'تجميد' : 'تفعيل';
+                if (!confirm(`هل تريد ${action} البطاقة رقم ${card.number}؟`)) return;
+                const cards = Storage.get('cards') || [];
+                const c = cards.find(x => x.id == card.id);
+                if (c) {
+                    c.status = isActive ? 'موقوف' : 'نشط';
+                    Storage.set('cards', cards);
+                    showToast(`تم ${action} البطاقة بنجاح`, 'success');
+                    this.refreshAll();
+                    this.showDetail(card.id);
+                }
+            },
+
+            copyNumber() {
+                const card = this._getCard();
+                if (!card) return;
+                navigator.clipboard.writeText(card.number).then(() => {
+                    showToast('تم نسخ رقم البطاقة!', 'success');
+                }).catch(() => {
+                    const t = document.createElement('textarea');
+                    t.value = card.number;
+                    document.body.appendChild(t);
+                    t.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(t);
+                    showToast('تم نسخ رقم البطاقة!', 'success');
+                });
+            },
+
+            changePin() {
+                const card = this._getCard();
+                if (!card) return;
+                const newPin = prompt('أدخل كلمة المرور الجديدة (4-6 أرقام):');
+                if (!newPin || newPin.length < 4) return alert('كلمة المرور يجب أن تكون 4 أرقام على الأقل');
+                const confirmPin = prompt('أعد إدخال كلمة المرور الجديدة:');
+                if (newPin !== confirmPin) return alert('❌ كلمتا المرور غير متطابقتين');
+                const cards = Storage.get('cards') || [];
+                const c = cards.find(x => x.id == card.id);
+                if (c) {
+                    c.password = newPin;
+                    c.pin = newPin;
+                    Storage.set('cards', cards);
+                    showToast('تم تغيير كلمة المرور بنجاح', 'success');
+                }
+            },
+
+            renameCard() {
+                const card = this._getCard();
+                if (!card) return;
+                const newLabel = prompt('أدخل الاسم الجديد للبطاقة:', card.label || card.beneficiary || '');
+                if (!newLabel || !newLabel.trim()) return;
+                const cards = Storage.get('cards') || [];
+                const c = cards.find(x => x.id == card.id);
+                if (c) {
+                    c.label = newLabel.trim();
+                    Storage.set('cards', cards);
+                    showToast('تم تغيير اسم البطاقة', 'success');
+                    this.refreshAll();
+                    this.showDetail(card.id);
+                }
+            },
+
+            transferBalance() {
+                const card = this._getCard();
+                if (!card) return;
+                const cards = Storage.get('cards') || [];
+                const otherCards = cards.filter(c => c.id != card.id && (c.status === 'نشط' || c.status === 'Active'));
+                if (otherCards.length === 0) return alert('لا توجد بطاقات أخرى نشطة للتحويل إليها');
+                const list = otherCards.map((c, i) => `${i + 1}. ${c.number} - ${c.beneficiary}`).join('\n');
+                const choice = prompt(`اختر البطاقة المستلمة بالرقم:\n${list}`);
+                if (!choice) return;
+                const targetCard = otherCards[parseInt(choice) - 1];
+                if (!targetCard) return alert('اختيار غير صحيح');
+                const amount = prompt(`تحويل من البطاقة ${card.number}\nإلى البطاقة ${targetCard.number}\n\nأدخل المبلغ:`);
+                if (!amount || isNaN(amount) || Number(amount) <= 0) return;
+                if (Number(amount) > Number(card.balance)) return alert('❌ الرصيد غير كافي');
+                const src = cards.find(x => x.id == card.id);
+                const tgt = cards.find(x => x.id == targetCard.id);
+                if (src && tgt) {
+                    src.balance = Number(src.balance) - Number(amount);
+                    tgt.balance = Number(tgt.balance) + Number(amount);
+                    Storage.set('cards', cards);
+                    showToast(`تم تحويل ${Number(amount).toLocaleString('ar-SA')} ريال بنجاح`, 'success');
+                    this.refreshAll();
+                    this.showDetail(card.id);
+                }
+            },
+
+            editFromModal() {
+                const card = this._getCard();
+                if (!card) return;
+                this.closeDetail();
+                Actions.editCard(card.id);
+            },
+
+            deleteFromModal() {
+                const card = this._getCard();
+                if (!card) return;
+                if (!confirm(`هل أنت متأكد من حذف البطاقة رقم ${card.number}؟\n\nلن تتمكن من استرجاعها!`)) return;
+                let cards = Storage.get('cards') || [];
+                cards = cards.filter(c => c.id != card.id);
+                Storage.set('cards', cards);
+                this.closeDetail();
+                showToast('تم حذف البطاقة', 'success');
+                this.refreshAll();
+            },
+
+            toggleForm() {
+                const body = document.getElementById('cardFormBody');
+                const icon = document.getElementById('toggleFormIcon');
+                this.formOpen = !this.formOpen;
+                body.style.display = this.formOpen ? '' : 'none';
+                icon.className = this.formOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
+            },
+
+            exportCSV() {
+                const cards = Storage.get('cards') || [];
+                if (cards.length === 0) return showToast('لا توجد بطاقات للتصدير', 'error');
+                const headers = ['رقم البطاقة', 'المحفظة', 'المستفيد', 'الهوية', 'الرصيد', 'الحالة'];
+                const rows = cards.map(c => [c.number, c.wallet, c.beneficiary, c.identity || '', c.balance, c.status]);
+                const csv = '\uFEFF' + [headers, ...rows].map(r => r.join(',')).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'cards_export.csv';
+                a.click();
+                showToast('تم تصدير البطاقات بنجاح', 'success');
+            },
+
+            refreshAll() {
+                this.loadStats();
+                this.loadGrid();
+            },
+
+            _getCard() {
+                if (!this.currentCardId) return null;
+                const cards = Storage.get('cards') || [];
+                return cards.find(c => c.id == this.currentCardId) || null;
+            }
+        };
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', () => {
+            CardPage.init();
+        });
+    </script>
+
+    <script>
+        // PWA Service Worker Register
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('SW registered!', reg))
+                    .catch(err => console.log('SW failed!', err));
+            });
+        }
+    </script>
+    <script src="ai-assistant.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>نقطة البيع - تراوف</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all-svg.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+
+    <!-- PWA / Mobile App Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00A59B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+</head>
+
+<body>
+
+        <nav class="sidebar">
+        <div class="sidebar-header">
+            <img src="assets/logo.png" alt="TRAOF Logo" style="max-height:50px;">
+        </div>
+        <div class="sidebar-profile">
+            <div class="sidebar-profile-avatar">م</div>
+            <div class="sidebar-profile-name">المشرف</div>
+            <div class="sidebar-profile-role"><i class="fas fa-shield-alt"></i> مدير النظام</div>
+        </div>
+        <div class="nav-section-label">القائمة الرئيسية</div>
+        <ul class="nav-links">
+            <li><a href="index.html" ><span class="nav-icon-box"><i class="fas fa-home"></i></span> لوحة التحكم</a></li>
+            <li><a href="cards.html" ><span class="nav-icon-box"><i class="fas fa-credit-card"></i></span> البطاقات</a></li>
+            <li><a href="wallets.html" ><span class="nav-icon-box"><i class="fas fa-wallet"></i></span> المحافظ</a></li>
+            <li><a href="merchants.html" ><span class="nav-icon-box"><i class="fas fa-store"></i></span> المتاجر</a></li>
+            <li><a href="orders.html" ><span class="nav-icon-box"><i class="fas fa-file-invoice-dollar"></i></span> أوامر التوريد</a></li>
+            <li><a href="pos.html" class="active"><span class="nav-icon-box"><i class="fas fa-cash-register"></i></span> نقطة البيع</a></li>
+            <li><a href="reports.html" ><span class="nav-icon-box"><i class="fas fa-chart-bar"></i></span> التقارير</a></li>
+        </ul>
+        <div class="nav-section-label">الإدارة</div>
+        <ul class="nav-links" style="flex:0;">
+            <li><a href="users.html" ><span class="nav-icon-box"><i class="fas fa-users-cog"></i></span> المستخدمين</a></li>
+            <li><a href="settings.html" ><span class="nav-icon-box"><i class="fas fa-cog"></i></span> الإعدادات</a></li>
+            <li><a href="monitor.html" ><span class="nav-icon-box"><i class="fas fa-stethoscope"></i></span> فحص النظام</a></li>
+            <li><a href="support.html" ><span class="nav-icon-box"><i class="fas fa-headset"></i></span> الدعم الفني</a></li>
+        </ul>
+        <div class="sidebar-bottom">
+
+            <button id="darkModeToggleBtn" class="dark-toggle" onclick="toggleDarkMode()" style="width:100%; text-align:right; margin-bottom:10px; padding:12px 20px; border-radius:12px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.05); color:inherit; cursor:pointer; display:flex; align-items:center; gap:10px; transition:0.3s; font-family:inherit; font-size:0.95rem;">
+                <i id="darkIcon" class="fas fa-moon"></i> المظهر الداكن
+            </button>
+        
+            <button class="sidebar-logout" onclick="if(typeof logout==='function')logout();else{localStorage.clear();location.href='login.html';}">
+                <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
+            </button>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <header>
+            <h1><i class="fas fa-cash-register"></i> نقطة البيع (POS)</h1>
+            <div class="user-profile"><span>مرحباً</span>
+                <div class="avatar">م</div>
+            </div>
+        </header>
+
+        <div class="pos-layout">
+            <!-- Main POS Area -->
+            <div class="pos-main">
+                <!-- Search & Filters -->
+                <div style="display:flex; gap:12px; margin-bottom:10px;">
+                    <div style="flex:1; position:relative;">
+                        <i class="fas fa-search"
+                            style="position:absolute; right:15px; top:12px; color:var(--muted)"></i>
+                        <input type="text" id="posSearch" placeholder="بحث عن منتج..." style="padding-right:40px;"
+                            oninput="POS.filterProducts()">
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div class="pos-categories" id="posCategories">
+                    <!-- Dynamic categories -->
+                </div>
+
+                <!-- Product Grid -->
+                <div class="pos-grid" id="posProductGrid">
+                    <!-- Dynamic products -->
+                </div>
+            </div>
+
+            <!-- Sidebar / Cart Area -->
+            <div class="pos-sidebar">
+                <div class="cart-header">
+                    <h3><i class="fas fa-shopping-basket"></i> السلة</h3>
+                    <button class="secondary" style="padding:5px 10px;" onclick="POS.clearCart()">مسح</button>
+                </div>
+
+                <div class="cart-items" id="cartItems">
+                    <!-- Dynamic cart items -->
+                    <div style="text-align:center; margin-top:50px; color:var(--muted)">
+                        <i class="fas fa-shopping-bag"
+                            style="font-size:3rem; opacity:0.2; margin-bottom:10px; display:block;"></i>
+                        السلة فارغة حالياً
+                    </div>
+                </div>
+
+                <div class="cart-footer">
+                    <div class="cart-total-row">
+                        <span>المجموع الفرعي</span>
+                        <span id="cartSubtotal">0.00 ر.س</span>
+                    </div>
+                    <div class="cart-total-row">
+                        <span>الضريبة (15%)</span>
+                        <span id="cartTax">0.00 ر.س</span>
+                    </div>
+                    <div class="cart-total-row grand-total">
+                        <span>الإجمالي</span>
+                        <span id="cartTotal">0.00 ر.س</span>
+                    </div>
+
+                    <button class="checkout-btn" onclick="POS.openCheckout()">
+                        <i class="fas fa-credit-card"></i> إتمام العملية
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="main-footer">
+            <p>صنع في تراؤف</p>
+            <img src="assets/logo.png" alt="TRAOF Logo">
+        </footer>
+    </main>
+
+    <!-- Modal for Checkout (Card Verification) -->
+    <div id="checkoutModal" class="modal-backdrop">
+        <div class="modal" style="max-width:450px;">
+            <header>
+                <strong><i class="fas fa-shield-alt"></i> إتمام العملية</strong>
+                <button class="secondary" onclick="POS.closeCheckout()"><i class="fas fa-times"></i></button>
+            </header>
+            <div class="modal-body">
+                <div id="checkoutSummary"
+                    style="margin-bottom:20px; padding:15px; background:#f8fbfa; border-radius:12px; text-align:center;">
+                    <div style="font-size:0.9rem; color:var(--muted)">إجمالي المبلغ المطلوب</div>
+                    <div style="font-size:2rem; font-weight:800; color:var(--brand-teal);" id="checkoutTotalVal">0.00
+                        ر.س</div>
+                </div>
+
+                <div class="form-group">
+                    <label>رقم البطاقة أو رقم الهوية</label>
+                    <input id="posCardNumber" type="text" placeholder="أدخل رقم الهوية أو رقم البطاقة">
+                </div>
+                <button class="secondary" style="width:100%; margin-bottom:15px;" onclick="POS.verifyCardAction()">
+                    <i class="fas fa-search"></i> تحقق من الرصيد
+                </button>
+
+                <div id="posCardStatus" style="margin-bottom:15px;"></div>
+
+                <div id="posRequestArea" style="display:none; margin-bottom:15px; text-align:center;">
+                    <button id="sendRequestBtn" style="width:100%; background:var(--brand-teal);"
+                        onclick="POS.sendPurchaseRequest()">
+                        <i class="fas fa-paper-plane"></i> إرسال طلب الشراء للمستفيد
+                    </button>
+                    <div id="posRequestStatus" style="margin-top:10px;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>كود سري (تأكيد الشراء)</label>
+                    <input id="posConfirmCode" type="text" placeholder="أدخل الكود الظاهر عند المستفيد" maxlength="6"
+                        style="letter-spacing:10px; text-align:center; font-weight:bold; font-size:1.2rem;">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="POS.closeCheckout()">إلغاء</button>
+                <button onclick="POS.processCartPayment()">
+                    <i class="fas fa-check"></i> تأكيد ودفع
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div id="posReceiptBackdrop" class="modal-backdrop">
+        <div class="modal">
+            <header>
+                <strong><i class="fas fa-receipt"></i> إيصال العملية</strong>
+                <button class="secondary" onclick="POS.closeModal()"><i class="fas fa-times"></i> إغلاق</button>
+            </header>
+            <div class="modal-body">
+                <div id="receiptContent">جارٍ التحضير…</div>
+            </div>
+            <div class="modal-actions">
+                <button class="secondary" onclick="window.print()"><i class="fas fa-print"></i> طباعة / PDF</button>
+                <button onclick="POS.closeModal()"><i class="fas fa-check"></i> تم</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=22"></script>
+    <script>
+        // Initialize POS UI
+        window.addEventListener('load', () => {
+            if (window.System && typeof System.init === 'function') {
+                System.init();
+            }
+            if (typeof POS !== 'undefined' && POS.init) {
+                POS.init();
+            }
+        });
+
+        // PWA Service Worker Register
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('SW registered!', reg))
+                    .catch(err => console.log('SW failed!', err));
+            });
+        }
+    </script>
+    <script src="ai-assistant.js"></script>
+</body>
+
+</html>

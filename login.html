@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تسجيل الدخول - تراوف</title>
+    <meta name="description" content="تسجيل الدخول لنظام تراوف لإدارة البطاقات والمحافظ الخيرية">
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="assets/vendor/fontawesome/css/all-svg.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <!-- PWA / Mobile App Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00A59B">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: "Tajawal", system-ui, sans-serif;
+            color: #fff;
+            background: linear-gradient(135deg, #0a2e2b 0%, #00594f 30%, #065c53 50%, #2a5418 80%, #1a3a12 100%) !important;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-grid {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+            padding: 40px 20px;
+        }
+
+        /* ===== Full-page animated background ===== */
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .glow-orb,
+        .mesh-overlay,
+        .float-shape {
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== LEFT PANEL (Branding) — Hidden ===== */
+        .brand-panel {
+            display: none;
+        }
+
+        /* Canvas is now fixed full-page, styled above */
+
+        /* Glowing orbs */
+        .glow-orb {
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+        }
+
+        .glow-orb.orb1 {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, #00A59B, transparent 70%);
+            top: -80px;
+            right: -60px;
+            animation: orbMove1 12s ease-in-out infinite;
+        }
+
+        .glow-orb.orb2 {
+            width: 280px;
+            height: 280px;
+            background: radial-gradient(circle, #8CC240, transparent 70%);
+            bottom: -60px;
+            left: -40px;
+            animation: orbMove2 10s ease-in-out infinite;
+        }
+
+        .glow-orb.orb3 {
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, #00d4aa, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: orbMove3 14s ease-in-out infinite;
+        }
+
+        @keyframes orbMove1 {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            25% {
+                transform: translate(-30px, 40px) scale(1.15);
+            }
+
+            50% {
+                transform: translate(20px, 60px) scale(0.9);
+            }
+
+            75% {
+                transform: translate(-15px, -20px) scale(1.1);
+            }
+        }
+
+        @keyframes orbMove2 {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            33% {
+                transform: translate(40px, -30px) scale(1.2);
+            }
+
+            66% {
+                transform: translate(-20px, -50px) scale(0.85);
+            }
+        }
+
+        @keyframes orbMove3 {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.3;
+            }
+
+            50% {
+                transform: translate(-30%, -60%) scale(1.3);
+                opacity: 0.5;
+            }
+        }
+
+        /* Mesh grid overlay */
+        .mesh-overlay {
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: meshShift 20s linear infinite;
+        }
+
+        @keyframes meshShift {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(60px, 60px);
+            }
+        }
+
+        /* Floating shapes */
+        .float-shape {
+            opacity: 0;
+            animation: shapeFloat 8s ease-in-out infinite;
+        }
+
+        .float-shape.s1 {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(0, 165, 155, 0.3);
+            border-radius: 4px;
+            top: 15%;
+            left: 20%;
+            animation-duration: 9s;
+            animation-delay: 0s;
+        }
+
+        .float-shape.s2 {
+            width: 12px;
+            height: 12px;
+            background: rgba(140, 194, 64, 0.25);
+            border-radius: 50%;
+            top: 70%;
+            left: 75%;
+            animation-duration: 7s;
+            animation-delay: 1s;
+        }
+
+        .float-shape.s3 {
+            width: 0;
+            height: 0;
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-bottom: 16px solid rgba(0, 212, 170, 0.2);
+            top: 40%;
+            left: 85%;
+            animation-duration: 11s;
+            animation-delay: 2s;
+        }
+
+        .float-shape.s4 {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            top: 85%;
+            left: 30%;
+            animation-duration: 8s;
+            animation-delay: 3s;
+        }
+
+        .float-shape.s5 {
+            width: 14px;
+            height: 14px;
+            background: rgba(0, 165, 155, 0.15);
+            border-radius: 3px;
+            top: 25%;
+            left: 65%;
+            animation-duration: 10s;
+            animation-delay: 0.5s;
+            transform: rotate(45deg);
+        }
+
+        .float-shape.s6 {
+            width: 8px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 50%;
+            top: 55%;
+            left: 15%;
+            animation-duration: 6s;
+            animation-delay: 1.5s;
+        }
+
+        @keyframes shapeFloat {
+
+            0%,
+            100% {
+                opacity: 0;
+                transform: translateY(0) rotate(0deg);
+            }
+
+            20% {
+                opacity: 0.8;
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: translateY(-40px) rotate(180deg);
+            }
+
+            80% {
+                opacity: 0.8;
+            }
+        }
+
+        .brand-logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            display: grid;
+            place-items: center;
+            margin-bottom: 28px;
+            z-index: 1;
+            animation: logoIn 0.8s ease;
+        }
+
+        @keyframes logoIn {
+            from {
+                opacity: 0;
+                transform: scale(0.7);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .brand-logo img {
+            height: 70px;
+            filter: brightness(10);
+        }
+
+        .brand-title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            margin-bottom: 12px;
+            z-index: 1;
+        }
+
+        .brand-desc {
+            font-size: 1.05rem;
+            opacity: 0.85;
+            max-width: 360px;
+            line-height: 1.8;
+            z-index: 1;
+            margin-bottom: 40px;
+        }
+
+        .brand-features {
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .bf-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(6px);
+            padding: 14px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            animation: bfSlide 0.6s ease both;
+        }
+
+        .bf-item:nth-child(1) {
+            animation-delay: 0.2s;
+        }
+
+        .bf-item:nth-child(2) {
+            animation-delay: 0.35s;
+        }
+
+        .bf-item:nth-child(3) {
+            animation-delay: 0.5s;
+        }
+
+        @keyframes bfSlide {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .bf-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateX(-4px);
+        }
+
+        .bf-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.15);
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            font-size: 1rem;
+        }
+
+        .bf-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* ===== Form Panel (Centered Card) ===== */
+        .form-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 50px 44px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 28px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            animation: formSlide 0.6s ease;
+            z-index: 1;
+            color: #3E4559;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        @keyframes formSlide {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .login-form {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .form-header {
+            margin-bottom: 32px;
+        }
+
+        .form-header h2 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin: 0 0 8px;
+            color: #3E4559;
+        }
+
+        .form-header p {
+            color: #8c97a8;
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        /* Role Selector */
+        .role-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 28px;
+            background: #f7f9fb;
+            padding: 6px;
+            border-radius: 14px;
+        }
+
+        .role-btn {
+            flex: 1;
+            padding: 12px 10px;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: #8c97a8;
+            font-weight: 700;
+            font-family: "Tajawal";
+            font-size: 0.88rem;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .role-btn.active {
+            background: linear-gradient(135deg, var(--brand-teal, #00A59B), var(--brand-green, #8CC240));
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0, 165, 155, 0.3);
+        }
+
+        .role-btn:not(.active):hover {
+            background: #e7f7f6;
+            color: #00A59B;
+        }
+
+        /* Input Fields */
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #3E4559;
+        }
+
+        .input-group label i {
+            color: #00A59B;
+            margin-inline-end: 6px;
+        }
+
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e6ecf2;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: "Tajawal";
+            color: #3E4559;
+            outline: none;
+            transition: all 0.25s;
+            background: #fff;
+        }
+
+        .input-wrap input:focus {
+            border-color: #00A59B;
+            box-shadow: 0 0 0 4px rgba(0, 165, 155, 0.1);
+        }
+
+        .input-wrap input::placeholder {
+            color: #c0c8d4;
+        }
+
+        .toggle-pass {
+            position: absolute;
+            left: 14px;
+            background: none;
+            border: none;
+            color: #8c97a8;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 4px;
+            transition: color 0.2s;
+            box-shadow: none;
+        }
+
+        .toggle-pass:hover {
+            color: #00A59B;
+        }
+
+        /* Login Button */
+        .btn-login {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #00A59B, #8CC240);
+            color: #fff;
+            font-weight: 700;
+            font-family: "Tajawal";
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 6px 20px rgba(0, 165, 155, 0.3);
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 165, 155, 0.4);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login.loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .btn-login .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        .btn-login.loading .spinner {
+            display: block;
+        }
+
+        .btn-login.loading .btn-text {
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Forgot Password */
+        .forgot-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+        }
+
+        .forgot-link {
+            color: #00A59B;
+            font-size: 0.85rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .forgot-link:hover {
+            color: #008f87;
+        }
+
+        /* Hint Box */
+        .hint-box {
+            margin-top: 28px;
+            background: #f0faf9;
+            border: 1px solid #c9e8e5;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 0.85rem;
+            color: #627089;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hint-box i {
+            color: #00A59B;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .hint-box code {
+            background: #e7f7f6;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            color: #00A59B;
+        }
+
+        /* Back Link */
+        .back-link {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .back-link a {
+            color: #8c97a8;
+            text-decoration: none;
+            font-size: 0.88rem;
+            transition: color 0.2s;
+        }
+
+        .back-link a:hover {
+            color: #00A59B;
+        }
+
+        .back-link a i {
+            margin-inline-end: 4px;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 600px) {
+            .page-grid {
+                padding: 20px 12px;
+            }
+
+            .form-panel {
+                padding: 30px 20px;
+                border-radius: 20px;
+                max-width: 100%;
+            }
+        }
+
+        /* Forgot Password Modal */
+        .forgot-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(6px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .forgot-modal-overlay.show {
+            display: flex;
+        }
+
+        .forgot-modal {
+            background: white;
+            border-radius: 24px;
+            padding: 36px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: fmIn 0.3s ease;
+        }
+
+        @keyframes fmIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .forgot-modal h3 {
+            margin: 0 0 8px;
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .forgot-modal p {
+            color: #8c97a8;
+            font-size: 0.9rem;
+            margin: 0 0 24px;
+        }
+
+        .forgot-modal .fm-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e6ecf2;
+            border-radius: 12px;
+            font-family: 'Tajawal';
+            font-size: 1rem;
+            text-align: center;
+            outline: none;
+            transition: all 0.25s;
+        }
+
+        .forgot-modal .fm-input:focus {
+            border-color: #00A59B;
+            box-shadow: 0 0 0 4px rgba(0, 165, 155, 0.1);
+        }
+
+        .forgot-modal .fm-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #00A59B, #8CC240);
+            color: #fff;
+            font-weight: 700;
+            font-family: 'Tajawal';
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 6px 20px rgba(0, 165, 155, 0.3);
+        }
+
+        .forgot-modal .fm-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 165, 155, 0.4);
+        }
+
+        .forgot-modal .fm-close {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 6px;
+            box-shadow: none;
+        }
+
+        .forgot-modal .fm-close:hover {
+            color: #333;
+        }
+
+        .forgot-modal .fm-result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 14px;
+            display: none;
+        }
+
+        .forgot-modal .fm-result.success {
+            display: block;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+        }
+
+        .forgot-modal .fm-result.error {
+            display: block;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Full-page Animated Background Elements -->
+    <canvas id="particleCanvas"></canvas>
+    <div class="glow-orb orb1"></div>
+    <div class="glow-orb orb2"></div>
+    <div class="glow-orb orb3"></div>
+    <div class="mesh-overlay"></div>
+    <div class="float-shape s1"></div>
+    <div class="float-shape s2"></div>
+    <div class="float-shape s3"></div>
+    <div class="float-shape s4"></div>
+    <div class="float-shape s5"></div>
+    <div class="float-shape s6"></div>
+
+    <!-- Brand Panel -->
+    <div class="page-grid">
+        <div class="brand-panel">
+            <div class="brand-logo">
+                <img src="assets/logo.png" alt="تراوف">
+            </div>
+            <h1 class="brand-title">تراوف</h1>
+            <p class="brand-desc">نظام خيري متكامل لإدارة البطاقات والمحافظ والمستفيدين مع نقطة بيع وتقارير تفاعلية.</p>
+
+            <div class="brand-features">
+                <div class="bf-item">
+                    <div class="bf-icon"><i class="fas fa-credit-card"></i></div>
+                    <span class="bf-text">إدارة بطاقات ومحافظ متعددة</span>
+                </div>
+                <div class="bf-item">
+                    <div class="bf-icon"><i class="fas fa-cash-register"></i></div>
+                    <span class="bf-text">نقطة بيع POS احترافية</span>
+                </div>
+                <div class="bf-item">
+                    <div class="bf-icon"><i class="fas fa-chart-line"></i></div>
+                    <span class="bf-text">تقارير ورسوم بيانية تفاعلية</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Panel -->
+        <div class="form-panel">
+            <div class="login-form">
+                <div class="form-header">
+                    <h2>مرحباً بعودتك 👋</h2>
+                    <p>سجل دخولك للوصول إلى لوحة التحكم</p>
+                </div>
+
+                <!-- Role Selector -->
+                <div class="role-selector">
+                    <button type="button" id="role_admin" class="role-btn active" onclick="Auth.setRole('admin')">
+                        <i class="fas fa-user-shield"></i> مدير
+                    </button>
+                    <button type="button" id="role_merchant" class="role-btn" onclick="Auth.setRole('merchant')">
+                        <i class="fas fa-store"></i> تاجر
+                    </button>
+                    <button type="button" id="role_beneficiary" class="role-btn" onclick="Auth.setRole('beneficiary')">
+                        <i class="fas fa-user"></i> مستفيد
+                    </button>
+                </div>
+                <input type="hidden" id="roleInput" value="admin" />
+
+                <!-- Username -->
+                <div class="input-group">
+                    <label><i class="fas fa-user"></i> اسم المستخدم أو رقم الهوية</label>
+                    <div class="input-wrap">
+                        <input type="text" id="username" placeholder="اسم المستخدم أو رقم الهوية"
+                            autocomplete="username" />
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="input-group">
+                    <label><i class="fas fa-lock"></i> كلمة المرور</label>
+                    <div class="input-wrap">
+                        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+                        <button type="button" class="toggle-pass" onclick="togglePassword()" title="إظهار/إخفاء">
+                            <i class="fas fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Login Button -->
+                <button class="btn-login" onclick="handleLogin()" id="loginBtn">
+                    <div class="spinner"></div>
+                    <span class="btn-text"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</span>
+                </button>
+
+                <!-- Forgot / Back -->
+                <div class="forgot-row">
+                    <a href="#" class="forgot-link" onclick="showForgotModal(); return false;">نسيت كلمة المرور؟</a>
+                    <a href="landing.html" class="forgot-link"><i class="fas fa-home"></i> الصفحة الرئيسية</a>
+                </div>
+
+                <!-- Hint -->
+                <div class="hint-box">
+                    <i class="fas fa-info-circle"></i>
+                    <span>كلمة المرور التجريبية: <code>123</code> — أدوار: admin / merchant / رقم الهوية للمستفيد</span>
+                </div>
+            </div>
+        </div>
+    </div> <!-- /page-grid -->
+
+    <!-- Forgot Password Modal -->
+    <div class="forgot-modal-overlay" id="forgotOverlay" onclick="if(event.target===this)closeForgotModal()">
+        <div class="forgot-modal">
+            <button class="fm-close" onclick="closeForgotModal()"><i class="fas fa-times"></i></button>
+            <div
+                style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#00A59B,#8CC240);display:grid;place-items:center;margin:0 auto 16px;">
+                <i class="fas fa-key" style="color:#fff;font-size:1.4rem;"></i>
+            </div>
+            <h3>استعادة كلمة المرور</h3>
+            <p>أدخل اسم المستخدم أو رقم الهوية وسنعرض لك كلمة المرور</p>
+            <input type="text" class="fm-input" id="forgotUsername" placeholder="اسم المستخدم أو رقم الهوية">
+            <button class="fm-btn" onclick="handleForgotPassword()"><i class="fas fa-search"></i> استرجاع كلمة
+                المرور</button>
+            <div class="fm-result" id="forgotResult"></div>
+        </div>
+    </div>
+
+    <!-- Particle Animation -->
+    <script>
+        (function () {
+            const canvas = document.getElementById('particleCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            const PARTICLE_COUNT = 60;
+            const colors = [
+                'rgba(0, 165, 155, ',
+                'rgba(140, 194, 64, ',
+                'rgba(0, 212, 170, ',
+                'rgba(255, 255, 255, '
+            ];
+
+            function resize() {
+                canvas.width = canvas.offsetWidth * (window.devicePixelRatio || 1);
+                canvas.height = canvas.offsetHeight * (window.devicePixelRatio || 1);
+                ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+            }
+
+            function createParticle() {
+                return {
+                    x: Math.random() * canvas.offsetWidth,
+                    y: Math.random() * canvas.offsetHeight,
+                    size: Math.random() * 2.5 + 0.5,
+                    speedX: (Math.random() - 0.5) * 0.4,
+                    speedY: (Math.random() - 0.5) * 0.4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: Math.random() * 0.5 + 0.1,
+                    alphaDir: Math.random() > 0.5 ? 0.003 : -0.003,
+                    connected: Math.random() > 0.5
+                };
+            }
+
+            function init() {
+                resize();
+                particles = [];
+                for (let i = 0; i < PARTICLE_COUNT; i++) {
+                    particles.push(createParticle());
+                }
+            }
+
+            function drawConnections() {
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        if (!particles[i].connected || !particles[j].connected) continue;
+                        const dx = particles[i].x - particles[j].x;
+                        const dy = particles[i].y - particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 120) {
+                            const opacity = (1 - dist / 120) * 0.15;
+                            ctx.beginPath();
+                            ctx.strokeStyle = `rgba(0, 165, 155, ${opacity})`;
+                            ctx.lineWidth = 0.5;
+                            ctx.moveTo(particles[i].x, particles[i].y);
+                            ctx.lineTo(particles[j].x, particles[j].y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+                const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+                particles.forEach(p => {
+                    p.x += p.speedX;
+                    p.y += p.speedY;
+                    p.alpha += p.alphaDir;
+
+                    if (p.alpha <= 0.05 || p.alpha >= 0.6) p.alphaDir *= -1;
+                    if (p.x < 0) p.x = w;
+                    if (p.x > w) p.x = 0;
+                    if (p.y < 0) p.y = h;
+                    if (p.y > h) p.y = 0;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color + p.alpha + ')';
+                    ctx.fill();
+
+                    // Subtle glow for larger particles
+                    if (p.size > 1.5) {
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+                        ctx.fillStyle = p.color + (p.alpha * 0.15) + ')';
+                        ctx.fill();
+                    }
+                });
+
+                drawConnections();
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', () => { resize(); });
+            init();
+            animate();
+        })();
+    </script>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            Auth.setRole('admin');
+
+            // Enter key login
+            document.getElementById('password').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') handleLogin();
+            });
+            document.getElementById('username').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') document.getElementById('password').focus();
+            });
+        });
+
+        // Toggle password visibility
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        // Login with loading animation
+        function handleLogin() {
+            const btn = document.getElementById('loginBtn');
+            btn.classList.add('loading');
+            setTimeout(() => {
+                Auth.login();
+                btn.classList.remove('loading');
+            }, 600);
+        }
+
+        // Forgot Password
+        function showForgotModal() {
+            document.getElementById('forgotOverlay').classList.add('show');
+            document.getElementById('forgotUsername').value = '';
+            document.getElementById('forgotResult').className = 'fm-result';
+            document.getElementById('forgotResult').innerHTML = '';
+            setTimeout(() => document.getElementById('forgotUsername').focus(), 200);
+        }
+        function closeForgotModal() {
+            document.getElementById('forgotOverlay').classList.remove('show');
+        }
+        function handleForgotPassword() {
+            const username = document.getElementById('forgotUsername').value.trim();
+            const resultEl = document.getElementById('forgotResult');
+            if (!username) {
+                resultEl.className = 'fm-result error';
+                resultEl.innerHTML = '<i class="fas fa-exclamation-circle" style="color:#ef4444;"></i> الرجاء إدخال اسم المستخدم أو رقم الهوية';
+                return;
+            }
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const user = users.find(u => u.username === username || u.name === username);
+            if (user) {
+                const pass = user.password || '123';
+                resultEl.className = 'fm-result success';
+                resultEl.innerHTML = `
+                    <p style="margin:0 0 8px; color:#059669; font-weight:700;"><i class="fas fa-check-circle"></i> تم العثور على الحساب</p>
+                    <p style="margin:0; font-size:0.9rem; color:#3E4559;">👤 الاسم: <strong>${user.name}</strong></p>
+                    <p style="margin:4px 0 0; font-size:0.9rem; color:#3E4559;">🔑 كلمة المرور: <code style="background:#e7f7f6; padding:4px 12px; border-radius:8px; font-size:1.1rem; font-weight:800; color:#00A59B;">${pass}</code></p>
+                `;
+            } else {
+                // Check default accounts
+                const defaults = [
+                    { username: 'admin', password: '123', name: 'المدير' },
+                    { username: 'merchant', password: '123', name: 'التاجر' }
+                ];
+                const def = defaults.find(d => d.username === username);
+                if (def) {
+                    resultEl.className = 'fm-result success';
+                    resultEl.innerHTML = `
+                        <p style="margin:0 0 8px; color:#059669; font-weight:700;"><i class="fas fa-check-circle"></i> حساب افتراضي</p>
+                        <p style="margin:0; font-size:0.9rem; color:#3E4559;">👤 الاسم: <strong>${def.name}</strong></p>
+                        <p style="margin:4px 0 0; font-size:0.9rem; color:#3E4559;">🔑 كلمة المرور: <code style="background:#e7f7f6; padding:4px 12px; border-radius:8px; font-size:1.1rem; font-weight:800; color:#00A59B;">${def.password}</code></p>
+                    `;
+                } else {
+                    resultEl.className = 'fm-result error';
+                    resultEl.innerHTML = '<p style="margin:0; color:#dc2626;"><i class="fas fa-times-circle"></i> لم يتم العثور على حساب بهذا الاسم</p><p style="margin:8px 0 0; font-size:0.85rem; color:#8c97a8;">تأكد من اسم المستخدم وحاول مرة أخرى</p>';
+                }
+            }
+        }
+        // Enter key in forgot modal
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('forgotUsername').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') handleForgotPassword();
+            });
+        });
+    </script>
+
+    <script>
+        // PWA Service Worker Register
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('SW registered!', reg))
+                    .catch(err => console.log('SW failed!', err));
+            });
+        }
+    </script>
+
+</body>
+
+</html>

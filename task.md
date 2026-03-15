@@ -1,0 +1,47 @@
+- [x] Create Supply Orders page (orders.html) <!-- id: 22 -->
+- [x] Implement Supply Orders Logic (JS) <!-- id: 23 -->
+- [x] Update Sidebars with new link <!-- id: 24 -->
+- [x] Implement Support Ticket System (support.html) <!-- id: 25 -->
+- [x] Implement Support Logic (JS) <!-- id: 26 -->
+- [x] Move 'Made in Traof' and Logo to Main Content Footer <!-- id: 30 -->
+- [x] Wallet System Upgrades
+      - [x] Replace the basic table structure with a premium "Vault Card" dashboard format.
+      - [x] Integrate modern icons, gradient backgrounds, and progress bars for the vault cards.
+    - [x] Support Chat Interface Upgrades
+      - [x] Replace the static ticket table list with a dynamic, WhatsApp-style split-pane view in `support.html`.
+      - [x] Update CSS to style chat bubbles separately for the user and admin views.
+      - [x] Overhaul `script.js` to manage the chat pane instead of opening generic modals.
+    - [x] Global Dark Mode (الوضع المظلم الشامل)
+      - [x] Add dark mode toggle button to the sidebar.
+      - [x] Define CSS variables for dark theme colors.
+      - [x] Implement JS logic to toggle and persist the theme using localStorage.
+- [x] Implement Edit/Delete for Cards <!-- id: 32 -->
+- [x] Enhance Supply Orders (Withdraw, Reject Reason, Admin Actions) <!-- id: 33 -->
+
+## Phase 2: Advanced System Features
+- [x] 1. AI-Powered Insights (Admin Dashboard)
+  - [x] Add sliding glow insights panel to `index.html`.
+  - [x] Implement JS typewriter effect and dummy AI predictions.
+- [x] 2. Supply Orders Kanban Board
+  - [x] Convert `orders.html` table to a drag-and-drop Kanban view.
+  - [x] Update `script.js` to handle drag events and status changes.
+- [x] 3. Merchant Gamification & Rewards
+  - [x] Add achievements UI to `merchant_home.html`.
+  - [x] Display badges in admin `merchant_view.html`.
+- [x] 4. Actionable Smart Notifications
+  - [x] Overhaul notification dropdown/drawer with actionable buttons.
+  - [x] Add JS logic to handle inline actions (e.g., Quick Charge).
+- [x] 5. Interactive 3D Card Viewer
+  - [x] Add 3D CSS transform logic to `beneficiary_home.html` card.
+  - [x] Include mousemove tilt effect JS.
+
+## Phase 3: Interactive Visualizations & GIS
+- [/] 1. Live Transaction Heatmap (Admin Dashboard)
+  - [/] Integrate Leaflet.js library.
+  - [/] Create a "dark-themed" interactive map on the dashboard.
+  - [ ] Plot transactions/merchants with custom markers and popups.
+- [ ] 2. Merchant Location Directory Map
+  - [ ] Add map view toggle to `merchants.html`.
+  - [ ] Implement clustering for merchant markers.
+- [ ] 3. Real-time Geographic Feed
+  - [ ] Add a floating "Live Pulse" indicator that pings on the map during new events.
