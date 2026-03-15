@@ -1,0 +1,7 @@
+[submodule "assets/ashm-abo-nwaf"]
+ path = assets/ashm-abo-nwaf
+ url = https://github.com/81fr/thna
+[submodule "assets/kafalah-platform"]
+ path = assets/kafalah-platform
+ url = https://github.com/81fr/thna
+
