@@ -1,0 +1,17 @@
+name: Fix Submodules
+on: push
+jobs:
+  fix:
+      runs-on: ubuntu-latest
+          steps:
+                - uses: actions/checkout@v4
+                      - name: Remove submodules
+                              run: |
+                                        git rm -f assets/ashm-abo-nwaf || true
+                                                  git rm -f assets/kafalah-platform || true
+                                                            rm -rf .gitmodules || true
+                                                                      git config user.name "FixBot"
+                                                                                git config user.email "bot@example.com"
+                                                                                          git commit -m "Remove broken submodules via Action" || true
+                                                                                                    git push origin main || true
+                                                                                                    
