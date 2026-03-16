@@ -467,6 +467,10 @@
             <button id="autoLayoutBtn" style="background-color: #27ae60; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 5px;">
                 <span>✨</span> تنظيم تلقائي (أفضل وضع)
             </button>
+            
+            <button id="saveLayoutBtn" style="background-color: #e67e22; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; width: 100%; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                <span>💾</span> حفظ كتنسيق أساسي (للكل)
+            </button>
         </div>
 
         <div style="margin-top: 30px; font-size: 13px; color: #7f8c8d; padding-top: 15px; border-top: 1px solid #eee;">
@@ -491,7 +495,7 @@
     <!-- Firebase SDK (Version 9 Modular JS API) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, getDocs, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDHnYqiE17Jp1INIqX2Goms-KEdE-Tvk1k",
@@ -540,6 +544,39 @@
                 console.error("حدث خطأ أثناء حفظ البيانات:", e);
             }
         };
+
+        // دالة لحفظ إعدادات القالب
+        window.saveTemplateConfigToFirebase = async function(templateId, config) {
+            try {
+                // استخدام معرف التصميم كاسم للمستند (استبدال السلاش لضمان التوافق)
+                const docId = templateId.replace(/\//g, '_');
+                await setDoc(doc(db, "template_configs", docId), {
+                    ...config,
+                    updatedAt: serverTimestamp()
+                });
+                return true;
+            } catch (e) {
+                console.error("Error saving template config:", e);
+                return false;
+            }
+        }
+
+        // دالة لجلب كل الإعدادات المحفوظة
+        window.loadTemplateConfigsFromFirebase = async function() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "template_configs"));
+                const configs = {};
+                querySnapshot.forEach((doc) => {
+                    // استعادة المسار الأصلي من معرف المستند
+                    const templateId = doc.id.replace(/_/g, '/');
+                    configs[templateId] = doc.data();
+                });
+                return configs;
+            } catch (e) {
+                console.error("Error loading template configs:", e);
+                return {};
+            }
+        }
     </script>
 
     <script>
@@ -646,6 +683,7 @@
         const templateThumbs = document.querySelectorAll('.template-thumb');
         const customTemplateInput = document.getElementById('customTemplateInput');
         const autoLayoutBtn = document.getElementById('autoLayoutBtn');
+        const saveLayoutBtn = document.getElementById('saveLayoutBtn');
 
         // دالة "الذكاء الاصطناعي" لتحليل ألوان الخلفية واختيار أفضل نص متباين
         function getAIContrastColor(xPercent, yPercent) {
@@ -713,6 +751,57 @@
         }
 
         autoLayoutBtn.addEventListener('click', applyAutoLayoutSystem);
+
+        // منطق حفظ التنسيق الحالي كافتراضي
+        saveLayoutBtn.addEventListener('click', async () => {
+            const currentSrc = bgImage.getAttribute('src');
+            if (!currentSrc) return;
+
+            const config = {
+                fontSize: parseInt(fontSizeSlider.value),
+                posY: parseInt(posYSlider.value),
+                posX: parseInt(posXSlider.value),
+                photoSize: parseInt(photoSizeSlider.value),
+                photoX: parseInt(photoXSlider.value),
+                photoY: parseInt(photoYSlider.value),
+                color: colorInput.value
+            };
+
+            const originalText = saveLayoutBtn.innerHTML;
+            saveLayoutBtn.innerHTML = '⌛ جاري الحفظ...';
+            saveLayoutBtn.disabled = true;
+
+            const success = await window.saveTemplateConfigToFirebase(currentSrc, config);
+            
+            if (success) {
+                // تحديث الذاكرة المحلية
+                autoLayouts[currentSrc] = config;
+                saveLayoutBtn.innerHTML = '✅ تم الحفظ كافتراضي!';
+                saveLayoutBtn.style.backgroundColor = '#27ae60';
+            } else {
+                saveLayoutBtn.innerHTML = '❌ فشل الحفظ';
+                saveLayoutBtn.style.backgroundColor = '#e74c3c';
+            }
+
+            setTimeout(() => {
+                saveLayoutBtn.innerHTML = originalText;
+                saveLayoutBtn.style.backgroundColor = '#e67e22';
+                saveLayoutBtn.disabled = false;
+            }, 2000);
+        });
+
+        // دالة لتهيئة الإعدادات من فايربيس عند تشغيل الموقع
+        async function initTemplateConfigs() {
+            const remoteConfigs = await window.loadTemplateConfigsFromFirebase();
+            Object.keys(remoteConfigs).forEach(id => {
+                autoLayouts[id] = remoteConfigs[id];
+            });
+            // إذا كان هناك صورة محملة بالفعل، أعد معايرة التنسيق
+            if (imageLoaded) applyAutoLayoutSystem();
+        }
+
+        // تشغيل الجلب عند بدء الموقع
+        initTemplateConfigs();
 
         function loadTemplate(src) {
             loadingMsg.style.display = 'block';
