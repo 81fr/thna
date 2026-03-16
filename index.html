@@ -541,41 +541,133 @@
                 
                 console.log("تم حفظ بيانات الزائر والصورة بنجاح في Firestore!");
             } catch (e) {
-                console.error("حدث خطأ أثناء حفظ البيانات:", e);
-            }
-        };
-
-        // دالة لحفظ إعدادات القالب
-        window.saveTemplateConfigToFirebase = async function(templateId, config) {
-            try {
-                // استخدام معرف التصميم كاسم للمستند (استبدال السلاش لضمان التوافق)
-                const docId = templateId.replace(/\//g, '_');
-                await setDoc(doc(db, "template_configs", docId), {
-                    ...config,
-                    updatedAt: serverTimestamp()
-                });
-                return true;
-            } catch (e) {
-                console.error("Error saving template config:", e);
-                return false;
-            }
-        }
-
-        // دالة لجلب كل الإعدادات المحفوظة
-        window.loadTemplateConfigsFromFirebase = async function() {
-            try {
-                const querySnapshot = await getDocs(collection(db, "template_configs"));
-                const configs = {};
-                querySnapshot.forEach((doc) => {
-                    // استعادة المسار الأصلي من معرف المستند
-                    const templateId = doc.id.replace(/_/g, '/');
-                    configs[templateId] = doc.data();
-                });
-                return configs;
-            } catch (e) {
                 console.error("Error loading template configs:", e);
                 return {};
             }
+        }
+
+        // --- AI-Powered Template Selection & Auto Layout Logic --- //
+        // إحداثيات محسنة بدقة (X, Y%) لكل نموذج
+        const autoLayouts = {
+            'assets/greeting.png':  { fontSize: 50, posY: 78, posX: 50, photoSize: 100, photoX: 50, photoY: 30, color: '#ffffff' },
+            'assets/greeting2.png': { fontSize: 45, posY: 73, posX: 50, photoSize: 95,  photoX: 50, photoY: 34, color: '#7a5c43' },
+            'assets/greeting3.png': { fontSize: 55, posY: 83, posX: 50, photoSize: 110, photoX: 50, photoY: 40, color: '#ffffff' },
+            'assets/greeting4.png': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35, color: '#ffffff' },
+            'assets/greeting5.png': { fontSize: 50, posY: 82, posX: 50, photoSize: 100, photoX: 50, photoY: 38, color: '#2c3e50' },
+            'assets/greeting6.png': { fontSize: 52, posY: 78, posX: 50, photoSize: 105, photoX: 50, photoY: 35, color: '#b8860b' },
+            'assets/greeting7.png': { fontSize: 50, posY: 72, posX: 50, photoSize: 100, photoX: 50, photoY: 32, color: '#2c3e50' },
+            'assets/greeting8.png': { fontSize: 46, posY: 74, posX: 50, photoSize: 90,  photoX: 50, photoY: 44, color: '#ffffff' },
+            'assets/greeting9.png': { fontSize: 52, posY: 77, posX: 50, photoSize: 105, photoX: 50, photoY: 37, color: '#ffffff' },
+            'default': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35, color: '#ffffff' }
+        };
+
+        // دالة "الذكاء الاصطناعي" لتحليل ألوان الخلفية واختيار أفضل نص متباين
+        function getAIContrastColor(xPercent, yPercent) {
+            if (!imageLoaded) return '#ffffff';
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tCtx = tempCanvas.getContext('2d');
+            tCtx.drawImage(bgImage, 0, 0, tempCanvas.width, tempCanvas.height);
+            const x = tempCanvas.width * (xPercent / 100);
+            const y = tempCanvas.height * (yPercent / 100);
+            const sampleSize = 40;
+            const imgData = tCtx.getImageData(
+                Math.max(0, x - sampleSize/2), 
+                Math.max(0, y - sampleSize/2), 
+                sampleSize, sampleSize
+            ).data;
+            let totalLuminance = 0;
+            for (let i = 0; i < imgData.length; i += 4) {
+                totalLuminance += (0.299 * imgData[i] + 0.587 * imgData[i+1] + 0.114 * imgData[i+2]);
+            }
+            const avgLuminance = totalLuminance / (imgData.length / 4);
+            if (avgLuminance > 180) return '#b8860b'; 
+            if (avgLuminance > 120) return '#2c3e50'; 
+            return '#ffffff';
+        }
+
+        window.applyAutoLayoutSystem = async function() {
+            const currentSrc = bgImage.getAttribute('src');
+            const config = autoLayouts[currentSrc] || autoLayouts['default'];
+            fontSizeSlider.value = config.fontSize;
+            posYSlider.value = isUserPhotoLoaded ? Math.min(config.posY + 8, 95) : config.posY;
+            posXSlider.value = config.posX;
+            if (isUserPhotoLoaded) {
+                photoSizeSlider.value = config.photoSize;
+                photoXSlider.value = config.photoX;
+                photoYSlider.value = config.photoY;
+            }
+            if (config.color) {
+                colorInput.value = config.color;
+            } else {
+                const bestColor = getAIContrastColor(posXSlider.value, posYSlider.value);
+                colorInput.value = bestColor;
+            }
+            const autoLayoutBtn = document.getElementById('autoLayoutBtn');
+            const originalText = autoLayoutBtn.innerHTML;
+            autoLayoutBtn.innerHTML = '✨ تم ضبط التنسيق واللون ذكياً!';
+            autoLayoutBtn.style.backgroundColor = '#2ecc71';
+            setTimeout(() => {
+                autoLayoutBtn.innerHTML = originalText;
+                autoLayoutBtn.style.backgroundColor = '#27ae60';
+            }, 2000);
+            if (nameInput.value.trim()) drawCard();
+        }
+
+        // منطق حفظ التنسيق الحالي كافتراضي
+        document.getElementById('saveLayoutBtn').addEventListener('click', async () => {
+            const currentSrc = bgImage.getAttribute('src');
+            if (!currentSrc) return;
+            const config = {
+                fontSize: parseInt(fontSizeSlider.value),
+                posY: parseInt(posYSlider.value),
+                posX: parseInt(posXSlider.value),
+                photoSize: parseInt(photoSizeSlider.value),
+                photoX: parseInt(photoXSlider.value),
+                photoY: parseInt(photoYSlider.value),
+                color: colorInput.value
+            };
+            const btn = document.getElementById('saveLayoutBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⌛ جاري الحفظ...';
+            btn.disabled = true;
+            const success = await window.saveTemplateConfigToFirebase(currentSrc, config);
+            if (success) {
+                autoLayouts[currentSrc] = config;
+                btn.innerHTML = '✅ تم الحفظ كافتراضي!';
+                btn.style.backgroundColor = '#27ae60';
+            } else {
+                btn.innerHTML = '❌ فشل الحفظ';
+                btn.style.backgroundColor = '#e74c3c';
+            }
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.backgroundColor = '#e67e22';
+                btn.disabled = false;
+            }, 2000);
+        });
+
+        // دالة لتهيئة الإعدادات من فايربيس
+        window.initTemplateConfigs = async function() {
+            const remoteConfigs = await window.loadTemplateConfigsFromFirebase();
+            Object.keys(remoteConfigs).forEach(id => {
+                autoLayouts[id] = remoteConfigs[id];
+            });
+            if (imageLoaded) applyAutoLayoutSystem();
+        }
+
+        // تشغيل الجلب عند بدء الموقع
+        initTemplateConfigs();
+
+        window.loadTemplate = function(src) {
+            loadingMsg.style.display = 'block';
+            generateBtn.disabled = true;
+            batchDownloadBtn.disabled = true;
+            imageLoaded = false;
+            bgImage.src = src;
+            bgImage.setAttribute('src', src);
+            setTimeout(applyAutoLayoutSystem, 100);
         }
     </script>
 
@@ -665,160 +757,7 @@
             }
         });
 
-        // --- AI-Powered Template Selection & Auto Layout Logic --- //
-        // إحداثيات محسنة بدقة (X, Y%) لكل نموذج
-        const autoLayouts = {
-            'assets/greeting.png':  { fontSize: 50, posY: 74, posX: 50, photoSize: 100, photoX: 50, photoY: 30, color: '#ffffff' },
-            'assets/greeting2.png': { fontSize: 45, posY: 73, posX: 50, photoSize: 95,  photoX: 50, photoY: 34, color: '#7a5c43' },
-            'assets/greeting3.png': { fontSize: 55, posY: 83, posX: 50, photoSize: 110, photoX: 50, photoY: 40, color: '#ffffff' },
-            'assets/greeting4.png': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35, color: '#ffffff' },
-            'assets/greeting5.png': { fontSize: 50, posY: 82, posX: 50, photoSize: 100, photoX: 50, photoY: 38, color: '#2c3e50' },
-            'assets/greeting6.png': { fontSize: 52, posY: 78, posX: 50, photoSize: 105, photoX: 50, photoY: 35, color: '#b8860b' },
-            'assets/greeting7.png': { fontSize: 50, posY: 72, posX: 50, photoSize: 100, photoX: 50, photoY: 32, color: '#2c3e50' },
-            'assets/greeting8.png': { fontSize: 46, posY: 74, posX: 50, photoSize: 90,  photoX: 50, photoY: 44, color: '#ffffff' },
-            'assets/greeting9.png': { fontSize: 52, posY: 77, posX: 50, photoSize: 105, photoX: 50, photoY: 37, color: '#ffffff' },
-            'default': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35, color: '#ffffff' }
-        };
-
-        const templateThumbs = document.querySelectorAll('.template-thumb');
-        const customTemplateInput = document.getElementById('customTemplateInput');
-        const autoLayoutBtn = document.getElementById('autoLayoutBtn');
-        const saveLayoutBtn = document.getElementById('saveLayoutBtn');
-
-        // دالة "الذكاء الاصطناعي" لتحليل ألوان الخلفية واختيار أفضل نص متباين
-        function getAIContrastColor(xPercent, yPercent) {
-            if (!imageLoaded) return '#ffffff';
-            
-            // رسم عينة سريعة للخلفية في الذاكرة لفحص اللون
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            const tCtx = tempCanvas.getContext('2d');
-            tCtx.drawImage(bgImage, 0, 0, tempCanvas.width, tempCanvas.height);
-            
-            const x = tempCanvas.width * (xPercent / 100);
-            const y = tempCanvas.height * (yPercent / 100);
-            
-            // سحب عينة من البكسلات حول موقع النص
-            const sampleSize = 40;
-            const imgData = tCtx.getImageData(
-                Math.max(0, x - sampleSize/2), 
-                Math.max(0, y - sampleSize/2), 
-                sampleSize, sampleSize
-            ).data;
-            
-            let totalLuminance = 0;
-            for (let i = 0; i < imgData.length; i += 4) {
-                totalLuminance += (0.299 * imgData[i] + 0.587 * imgData[i+1] + 0.114 * imgData[i+2]);
-            }
-            const avgLuminance = totalLuminance / (imgData.length / 4);
-            
-            // إذا كانت الخلفية فاتحة جداً، استخدم ألواناً داكنة ذهبية أو سوداء
-            if (avgLuminance > 180) return '#b8860b'; // DarkGoldenRod
-            if (avgLuminance > 120) return '#2c3e50'; // Dark Blue/Slate
-            return '#ffffff'; // أبيض للخلفيات الغامقة
-        }
-
-        async function applyAutoLayoutSystem() {
-            const currentSrc = bgImage.getAttribute('src');
-            const config = autoLayouts[currentSrc] || autoLayouts['default'];
-            
-            // 1. تطبيق الموقع والحجم أولاً
-            fontSizeSlider.value = config.fontSize;
-            posYSlider.value = isUserPhotoLoaded ? Math.min(config.posY + 8, 95) : config.posY;
-            posXSlider.value = config.posX;
-            
-            if (isUserPhotoLoaded) {
-                photoSizeSlider.value = config.photoSize;
-                photoXSlider.value = config.photoX;
-                photoYSlider.value = config.photoY;
-            }
-
-            if (config.color) {
-                colorInput.value = config.color;
-            } else {
-                // دمج تحليل الذكاء الاصطناعي مع التفضيلات الجديدة
-                const bestColor = getAIContrastColor(posXSlider.value, posYSlider.value);
-                colorInput.value = bestColor;
-            }
-            
-            // إظهار تنبيه بسيط للمستخدم بأن الذكاء الاصطناعي انتهى من التنسيق
-            const originalText = autoLayoutBtn.innerHTML;
-            autoLayoutBtn.innerHTML = '✨ تم ضبط التنسيق واللون ذكياً!';
-            autoLayoutBtn.style.backgroundColor = '#2ecc71';
-            setTimeout(() => {
-                autoLayoutBtn.innerHTML = originalText;
-                autoLayoutBtn.style.backgroundColor = '#27ae60';
-            }, 2000);
-
-            if (nameInput.value.trim()) drawCard();
-        }
-
         autoLayoutBtn.addEventListener('click', applyAutoLayoutSystem);
-
-        // منطق حفظ التنسيق الحالي كافتراضي
-        saveLayoutBtn.addEventListener('click', async () => {
-            const currentSrc = bgImage.getAttribute('src');
-            if (!currentSrc) return;
-
-            const config = {
-                fontSize: parseInt(fontSizeSlider.value),
-                posY: parseInt(posYSlider.value),
-                posX: parseInt(posXSlider.value),
-                photoSize: parseInt(photoSizeSlider.value),
-                photoX: parseInt(photoXSlider.value),
-                photoY: parseInt(photoYSlider.value),
-                color: colorInput.value
-            };
-
-            const originalText = saveLayoutBtn.innerHTML;
-            saveLayoutBtn.innerHTML = '⌛ جاري الحفظ...';
-            saveLayoutBtn.disabled = true;
-
-            const success = await window.saveTemplateConfigToFirebase(currentSrc, config);
-            
-            if (success) {
-                // تحديث الذاكرة المحلية
-                autoLayouts[currentSrc] = config;
-                saveLayoutBtn.innerHTML = '✅ تم الحفظ كافتراضي!';
-                saveLayoutBtn.style.backgroundColor = '#27ae60';
-            } else {
-                saveLayoutBtn.innerHTML = '❌ فشل الحفظ';
-                saveLayoutBtn.style.backgroundColor = '#e74c3c';
-            }
-
-            setTimeout(() => {
-                saveLayoutBtn.innerHTML = originalText;
-                saveLayoutBtn.style.backgroundColor = '#e67e22';
-                saveLayoutBtn.disabled = false;
-            }, 2000);
-        });
-
-        // دالة لتهيئة الإعدادات من فايربيس عند تشغيل الموقع
-        async function initTemplateConfigs() {
-            const remoteConfigs = await window.loadTemplateConfigsFromFirebase();
-            Object.keys(remoteConfigs).forEach(id => {
-                autoLayouts[id] = remoteConfigs[id];
-            });
-            // إذا كان هناك صورة محملة بالفعل، أعد معايرة التنسيق
-            if (imageLoaded) applyAutoLayoutSystem();
-        }
-
-        // تشغيل الجلب عند بدء الموقع
-        initTemplateConfigs();
-
-        function loadTemplate(src) {
-            loadingMsg.style.display = 'block';
-            generateBtn.disabled = true;
-            batchDownloadBtn.disabled = true;
-            imageLoaded = false;
-            
-            bgImage.src = src;
-            bgImage.setAttribute('src', src); // للتأكد من سهولة جلب الرابط لاحقاً
-            
-            // تطبيق التنسيق التلقائي عند تبديل النموذج
-            setTimeout(applyAutoLayoutSystem, 100);
-        }
 
         templateThumbs.forEach(thumb => {
             thumb.addEventListener('click', function() {
