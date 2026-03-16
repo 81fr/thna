@@ -2481,7 +2481,7 @@ window.Orders = Orders;
 const System = {
     init: () => {
         try {
-            console.log('TRAOF System: Initializing...');
+            console.log('Logo System: Initializing...');
             initData();
             migrateData();
 
@@ -2531,9 +2531,9 @@ const System = {
             // Support System
             if (typeof Support !== 'undefined' && typeof Support.init === 'function') Support.init();
 
-            console.log('TRAOF System: Ready.');
+            console.log('Logo System: Ready.');
         } catch (e) {
-            console.error('TRAOF System: Initialization Failed!', e);
+            console.error('Logo System: Initialization Failed!', e);
             if (typeof showToast === 'function') showToast('حدث خطأ أثناء تحميل النظام', 'error');
         }
     }
@@ -3101,7 +3101,7 @@ if (typeof System !== 'undefined') window.System = System;
 function toggleDarkMode() {
     document.body.classList.toggle('dark-mode');
     const isDark = document.body.classList.contains('dark-mode');
-    localStorage.setItem('traof_dark_mode', isDark ? '1' : '0');
+    localStorage.setItem('Logo_dark_mode', isDark ? '1' : '0');
     updateDarkIcon(isDark);
 }
 
@@ -3114,7 +3114,7 @@ function updateDarkIcon(isDark) {
 
 // Global Init for Dark Mode
 document.addEventListener('DOMContentLoaded', () => {
-    if (localStorage.getItem('traof_dark_mode') === '1') {
+    if (localStorage.getItem('Logo_dark_mode') === '1') {
         document.body.classList.add('dark-mode');
         updateDarkIcon(true);
     } else {

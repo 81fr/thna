@@ -373,7 +373,7 @@
     <!-- Print Area -->
     <div class="print-container">
         <div class="print-header">
-            <img src="assets/logo.png" alt="TRAOF Logo" onerror="this.style.display='none'">
+            <img src="assets/logo.png" alt="Logo Logo" onerror="this.style.display='none'">
             <h1 id="printPageTitle">بطاقة المستفيد المعتمدة</h1>
         </div>
 
@@ -413,7 +413,7 @@
 
                 grid.innerHTML = cards.map(c => {
                     const formattedNum = c.number.replace(/(\d{4})(?=\d)/g, '$1 ');
-                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('TRAOF-' + c.number)}`;
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent('Logo-' + c.number)}`;
                     const cleanNum = c.number.replace(/\s/g, '');
 
                     // Format Name: First and Last Only

@@ -1,6 +1,6 @@
 {
-    "appId": "com.traof.app",
-    "appName": "Traof",
+    "appId": "com.Logo.app",
+    "appName": "Logo",
     "webDir": "dist",
     "bundledWebRuntime": false,
     "server": {

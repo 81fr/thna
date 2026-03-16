@@ -1,5 +1,5 @@
 /* ===========================
-   TRAOF AI ASSISTANT - مساعد تراؤف الذكي
+   AI ASSISTANT - المساعد الذكي
    Open-Source Local AI Assistant
    =========================== */
 
@@ -8,12 +8,12 @@
 
     // ===== Configuration =====
     const AI_CONFIG = {
-        name: 'مساعد تراؤف',
+        name: 'المساعد الذكي',
         avatar: '🤖',
         welcomeMessages: {
-            admin: 'مرحباً بك أيها المشرف! أنا مساعد تراؤف الذكي. يمكنني مساعدتك في إدارة النظام، تحليل البيانات، وإنشاء التقارير. كيف أستطيع مساعدتك؟',
-            merchant: 'أهلاً بك! أنا مساعد تراؤف الذكي. يمكنني مساعدتك في متابعة مبيعاتك، إدارة طلبات الشراء، ومعرفة إحصائيات متجرك. كيف أقدر أساعدك؟',
-            beneficiary: 'مرحباً! أنا مساعد تراؤف الذكي. يمكنني مساعدتك في معرفة رصيدك، تتبع مشترياتك، وإيجاد أقرب المتاجر. كيف أقدر أساعدك؟'
+            admin: 'مرحباً بك أيها المشرف! أنا المساعد الذكي. يمكنني مساعدتك في إدارة النظام، تحليل البيانات، وإنشاء التقارير. كيف أستطيع مساعدتك؟',
+            merchant: 'أهلاً بك! أنا المساعد الذكي. يمكنني مساعدتك في متابعة مبيعاتك، إدارة طلبات الشراء، ومعرفة إحصائيات متجرك. كيف أقدر أساعدك؟',
+            beneficiary: 'مرحباً! أنا المساعد الذكي. يمكنني مساعدتك في معرفة رصيدك، تتبع مشترياتك، وإيجاد أقرب المتاجر. كيف أقدر أساعدك؟'
         },
         quickActions: {
             admin: [
@@ -313,7 +313,7 @@
         container.id = 'aiAssistantContainer';
         container.innerHTML = `
         <!-- Floating Button -->
-        <button id="aiAssistantBtn" title="مساعد تراؤف الذكي">
+        <button id="aiAssistantBtn" title="المساعد الذكي">
             <div class="ai-btn-pulse"></div>
             <span class="ai-btn-icon">🤖</span>
         </button>
@@ -324,13 +324,13 @@
                 <div class="ai-chat-header-info">
                     <div class="ai-chat-avatar">🤖</div>
                     <div>
-                        <div class="ai-chat-name">مساعد تراؤف</div>
+                        <div class="ai-chat-name">المساعد الذكي</div>
                         <div class="ai-chat-status"><span class="ai-status-dot"></span> متصل الآن</div>
                     </div>
                 </div>
                 <div class="ai-chat-header-actions">
-                    <button onclick="TraofAI.clearChat()" title="مسح المحادثة"><i class="fas fa-trash"></i></button>
-                    <button onclick="TraofAI.toggle()" title="إغلاق"><i class="fas fa-times"></i></button>
+                    <button onclick="SmartAI.clearChat()" title="مسح المحادثة"><i class="fas fa-trash"></i></button>
+                    <button onclick="LogoAI.toggle()" title="إغلاق"><i class="fas fa-times"></i></button>
                 </div>
             </div>
 
@@ -343,7 +343,7 @@
 
             <div class="ai-chat-input-area">
                 <input type="text" id="aiChatInput" placeholder="اكتب سؤالك هنا..." autocomplete="off">
-                <button id="aiSendBtn" onclick="TraofAI.send()"><i class="fas fa-paper-plane"></i></button>
+                <button id="aiSendBtn" onclick="LogoAI.send()"><i class="fas fa-paper-plane"></i></button>
             </div>
         </div>`;
 
@@ -467,7 +467,7 @@
     }
 
     // ===== Public API =====
-    window.TraofAI = {
+    window.LogoAI = {
         isOpen: false,
         messages: [],
 
@@ -476,32 +476,32 @@
             const userType = detectUserType();
 
             // Add welcome message
-            TraofAI.addBotMessage(AI_CONFIG.welcomeMessages[userType]);
+            LogoAI.addBotMessage(AI_CONFIG.welcomeMessages[userType]);
 
             // Render quick actions
             const qActions = AI_CONFIG.quickActions[userType];
             const qContainer = document.getElementById('aiQuickActions');
             if (qContainer && qActions) {
                 qContainer.innerHTML = qActions.map(a =>
-                    `<button class="ai-quick-btn" onclick="TraofAI.ask('${a.query}')">${a.label}</button>`
+                    `<button class="ai-quick-btn" onclick="LogoAI.ask('${a.query}')">${a.label}</button>`
                 ).join('');
             }
 
             // Button click
-            document.getElementById('aiAssistantBtn').addEventListener('click', TraofAI.toggle);
+            document.getElementById('aiAssistantBtn').addEventListener('click', LogoAI.toggle);
 
             // Enter key
             document.getElementById('aiChatInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') TraofAI.send();
+                if (e.key === 'Enter') LogoAI.send();
             });
         },
 
         toggle: () => {
             const win = document.getElementById('aiChatWindow');
             if (!win) return;
-            TraofAI.isOpen = !TraofAI.isOpen;
-            win.classList.toggle('open', TraofAI.isOpen);
-            if (TraofAI.isOpen) {
+            LogoAI.isOpen = !LogoAI.isOpen;
+            win.classList.toggle('open', LogoAI.isOpen);
+            if (LogoAI.isOpen) {
                 setTimeout(() => document.getElementById('aiChatInput')?.focus(), 300);
             }
         },
@@ -511,11 +511,11 @@
             if (!input || !input.value.trim()) return;
             const query = input.value.trim();
             input.value = '';
-            TraofAI.ask(query);
+            LogoAI.ask(query);
         },
 
         ask: (query) => {
-            TraofAI.addUserMessage(query);
+            LogoAI.addUserMessage(query);
 
             // Show typing indicator
             const messages = document.getElementById('aiChatMessages');
@@ -530,7 +530,7 @@
             setTimeout(() => {
                 typing.remove();
                 const response = AIEngine.processQuery(query);
-                TraofAI.addBotMessage(response);
+                LogoAI.addBotMessage(response);
             }, 600 + Math.random() * 800);
         },
 
@@ -543,7 +543,7 @@
             div.innerHTML = `${text}<div class="ai-msg-time">${time}</div>`;
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
-            TraofAI.messages.push({ role: 'user', text, time });
+            LogoAI.messages.push({ role: 'user', text, time });
         },
 
         addBotMessage: (text) => {
@@ -559,23 +559,23 @@
             div.innerHTML = `${formatted}<div class="ai-msg-time">🤖 ${time}</div>`;
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
-            TraofAI.messages.push({ role: 'bot', text, time });
+            LogoAI.messages.push({ role: 'bot', text, time });
         },
 
         clearChat: () => {
             const messages = document.getElementById('aiChatMessages');
             if (!messages) return;
             messages.innerHTML = '';
-            TraofAI.messages = [];
+            LogoAI.messages = [];
             const userType = detectUserType();
-            TraofAI.addBotMessage(AI_CONFIG.welcomeMessages[userType]);
+            LogoAI.addBotMessage(AI_CONFIG.welcomeMessages[userType]);
         }
     };
 
     // Auto-initialize when DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => setTimeout(TraofAI.init, 800));
+        document.addEventListener('DOMContentLoaded', () => setTimeout(LogoAI.init, 800));
     } else {
-        setTimeout(TraofAI.init, 800);
+        setTimeout(LogoAI.init, 800);
     }
 })();

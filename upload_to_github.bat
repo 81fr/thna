@@ -1,6 +1,6 @@
 @echo off
 echo ===================================================
-echo       TRAOF SYSTEM - AUTO UPLOAD TO GITHUB
+echo       Logo SYSTEM - AUTO UPLOAD TO GITHUB
 echo ===================================================
 echo.
 set /p REPO_URL="Enter your GitHub Repository URL: "

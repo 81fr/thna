@@ -1,6 +1,6 @@
 @echo off
 echo ===================================================
-echo       TRAOF SYSTEM - ONE-CLICK UPDATE
+echo       Logo SYSTEM - ONE-CLICK UPDATE
 echo ===================================================
 echo.
 echo Adding all new changes...

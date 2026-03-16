@@ -202,7 +202,7 @@
 
     <nav class="sidebar">
         <div class="sidebar-header">
-            <img src="assets/logo.png" alt="TRAOF Logo" style="max-height:50px;">
+            <img src="assets/logo.png" alt="Logo Logo" style="max-height:50px;">
         </div>
         <div class="sidebar-profile">
             <div class="sidebar-profile-avatar">م</div>
@@ -374,7 +374,7 @@
 
         <footer class="main-footer">
             <p>صنع في تراؤف</p>
-            <img src="assets/logo.png" alt="TRAOF Logo">
+            <img src="assets/logo.png" alt="Logo Logo">
         </footer>
     </main>
     <script src="script.js"></script>
@@ -486,12 +486,12 @@
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             const isDark = document.body.classList.contains('dark-mode');
-            localStorage.setItem('traof_dark_mode', isDark ? '1' : '0');
+            localStorage.setItem('Logo_dark_mode', isDark ? '1' : '0');
             const icon = document.getElementById('darkIcon');
             if (icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
         }
 
-        if (localStorage.getItem('traof_dark_mode') === '1') {
+        if (localStorage.getItem('Logo_dark_mode') === '1') {
             document.body.classList.add('dark-mode');
             const icon = document.getElementById('darkIcon');
             if (icon) icon.className = 'fas fa-sun';
