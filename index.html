@@ -488,7 +488,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-        import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDHnYqiE17Jp1INIqX2Goms-KEdE-Tvk1k",
@@ -502,40 +501,37 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const storage = getStorage(app);
 
         // نجعلها دالة عامة لكي تستطيع بقية أجزاء الموقع استدعاءها
         window.saveVisitorDataToFirebase = async function(name, canvasDataUrl) {
             try {
-                // 1. حفظ البيانات الأساسية في Firestore أولاً لضمان وصول الاسم حتى لو فشل رفع الصورة
-                const visitorDocRef = await addDoc(collection(db, "visitors"), {
+                // 1. ضغط الصورة بشكل أكبر لضمان توافقها مع حجم سجل Firestore (1MB)
+                // سنقوم بتحويل الكانفاس إلى JPEG بجودة متوسطة
+                const tempCanvas = document.createElement('canvas');
+                const img = new Image();
+                
+                await new Promise((resolve) => {
+                    img.onload = resolve;
+                    img.src = canvasDataUrl;
+                });
+
+                tempCanvas.width = img.width;
+                tempCanvas.height = img.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(img, 0, 0);
+                
+                // جودة 0.4 تعطي حجم ملف صغير جداً (حوالي 100-200 كيلوبايت) وهو ممتاز للبيانات
+                const compressedBase64 = tempCanvas.toDataURL('image/jpeg', 0.4);
+
+                // 2. حفظ البيانات في Firestore مباشرة (الاسم + كود الصورة)
+                await addDoc(collection(db, "visitors"), {
                     name: name,
+                    imageData: compressedBase64, // حفظ الصورة كنص داخل السجل
                     timestamp: serverTimestamp(),
-                    userAgent: navigator.userAgent,
-                    photoStatus: 'pending' // حالة أولية
+                    userAgent: navigator.userAgent
                 });
                 
-                console.log("تم حفظ الاسم في Firestore بنجاح!");
-
-                // 2. محاولة رفع الصورة اختيارياً
-                try {
-                    const timestampStr = new Date().getTime();
-                    const safeName = name.replace(/\s+/g, '-');
-                    const imageRef = ref(storage, `greetings/${safeName}_${timestampStr}.jpg`);
-                    
-                    const snapshot = await uploadString(imageRef, canvasDataUrl, 'data_url');
-                    const downloadURL = await getDownloadURL(snapshot.ref);
-
-                    // تحديث السجل برابط الصورة
-                    await updateDoc(doc(db, "visitors", visitorDocRef.id), {
-                        imageUrl: downloadURL,
-                        photoStatus: 'uploaded'
-                    });
-                    
-                    console.log("تم تحديث السجل برابط الصورة بنجاح!");
-                } catch (storageError) {
-                    console.warn("تنبيه: فشل رفع الصورة (ربما Storage غير مفعل بعد):", storageError);
-                }
+                console.log("تم حفظ بيانات الزائر والصورة بنجاح في Firestore!");
             } catch (e) {
                 console.error("حدث خطأ أثناء حفظ البيانات:", e);
             }
