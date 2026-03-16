@@ -668,16 +668,16 @@
         // --- AI-Powered Template Selection & Auto Layout Logic --- //
         // إحداثيات محسنة بدقة (X, Y%) لكل نموذج
         const autoLayouts = {
-            'assets/greeting.png':  { fontSize: 52, posY: 78, posX: 50, photoSize: 105, photoX: 50, photoY: 38 },
-            'assets/greeting2.png': { fontSize: 48, posY: 74, posX: 50, photoSize: 95,  photoX: 50, photoY: 34 },
-            'assets/greeting3.png': { fontSize: 55, posY: 82, posX: 50, photoSize: 115, photoX: 50, photoY: 42 },
-            'assets/greeting4.png': { fontSize: 50, posY: 68, posX: 50, photoSize: 100, photoX: 50, photoY: 28 },
-            'assets/greeting5.png': { fontSize: 50, posY: 80, posX: 50, photoSize: 100, photoX: 50, photoY: 40 },
-            'assets/greeting6.png': { fontSize: 54, posY: 74, posX: 50, photoSize: 110, photoX: 50, photoY: 34 },
-            'assets/greeting7.png': { fontSize: 50, posY: 70, posX: 50, photoSize: 100, photoX: 50, photoY: 30 },
-            'assets/greeting8.png': { fontSize: 46, posY: 84, posX: 50, photoSize: 90,  photoX: 50, photoY: 44 },
-            'assets/greeting9.png': { fontSize: 52, posY: 77, posX: 50, photoSize: 105, photoX: 50, photoY: 37 },
-            'default': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35 }
+            'assets/greeting.png':  { fontSize: 50, posY: 68, posX: 50, photoSize: 100, photoX: 50, photoY: 30, color: '#2c3e50' },
+            'assets/greeting2.png': { fontSize: 45, posY: 73, posX: 50, photoSize: 95,  photoX: 50, photoY: 34, color: '#7a5c43' },
+            'assets/greeting3.png': { fontSize: 55, posY: 83, posX: 50, photoSize: 110, photoX: 50, photoY: 40, color: '#ffffff' },
+            'assets/greeting4.png': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35, color: '#ffffff' },
+            'assets/greeting5.png': { fontSize: 50, posY: 82, posX: 50, photoSize: 100, photoX: 50, photoY: 38, color: '#2c3e50' },
+            'assets/greeting6.png': { fontSize: 52, posY: 78, posX: 50, photoSize: 105, photoX: 50, photoY: 35, color: '#b8860b' },
+            'assets/greeting7.png': { fontSize: 50, posY: 72, posX: 50, photoSize: 100, photoX: 50, photoY: 32, color: '#2c3e50' },
+            'assets/greeting8.png': { fontSize: 46, posY: 84, posX: 50, photoSize: 90,  photoX: 50, photoY: 44, color: '#ffffff' },
+            'assets/greeting9.png': { fontSize: 52, posY: 77, posX: 50, photoSize: 105, photoX: 50, photoY: 37, color: '#ffffff' },
+            'default': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35, color: '#ffffff' }
         };
 
         const templateThumbs = document.querySelectorAll('.template-thumb');
@@ -734,9 +734,13 @@
                 photoYSlider.value = config.photoY;
             }
 
-            // 2. تحليل الألوان تلقائياً واختيار الأفضل (الذكاء الاصطناعي)
-            const bestColor = getAIContrastColor(posXSlider.value, posYSlider.value);
-            colorInput.value = bestColor;
+            if (config.color) {
+                colorInput.value = config.color;
+            } else {
+                // دمج تحليل الذكاء الاصطناعي مع التفضيلات الجديدة
+                const bestColor = getAIContrastColor(posXSlider.value, posYSlider.value);
+                colorInput.value = bestColor;
+            }
             
             // إظهار تنبيه بسيط للمستخدم بأن الذكاء الاصطناعي انتهى من التنسيق
             const originalText = autoLayoutBtn.innerHTML;
