@@ -628,17 +628,18 @@
             }
         });
 
-        // --- Template Selection & Auto Layout Logic --- //
+        // --- AI-Powered Template Selection & Auto Layout Logic --- //
+        // إحداثيات محسنة بدقة (X, Y%) لكل نموذج
         const autoLayouts = {
-            'assets/greeting.png': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35 },
-            'assets/greeting2.png': { fontSize: 45, posY: 70, posX: 50, photoSize: 90, photoX: 50, photoY: 30 },
-            'assets/greeting3.png': { fontSize: 55, posY: 80, posX: 50, photoSize: 110, photoX: 50, photoY: 40 },
-            'assets/greeting4.png': { fontSize: 50, posY: 65, posX: 50, photoSize: 100, photoX: 50, photoY: 25 },
-            'assets/greeting5.png': { fontSize: 48, posY: 78, posX: 50, photoSize: 95, photoX: 50, photoY: 38 },
-            'assets/greeting6.png': { fontSize: 52, posY: 72, posX: 50, photoSize: 105, photoX: 50, photoY: 32 },
-            'assets/greeting7.png': { fontSize: 50, posY: 68, posX: 50, photoSize: 100, photoX: 50, photoY: 28 },
-            'assets/greeting8.png': { fontSize: 45, posY: 82, posX: 50, photoSize: 90, photoX: 50, photoY: 42 },
-            'assets/greeting9.png': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35 },
+            'assets/greeting.png':  { fontSize: 52, posY: 78, posX: 50, photoSize: 105, photoX: 50, photoY: 38 },
+            'assets/greeting2.png': { fontSize: 48, posY: 74, posX: 50, photoSize: 95,  photoX: 50, photoY: 34 },
+            'assets/greeting3.png': { fontSize: 55, posY: 82, posX: 50, photoSize: 115, photoX: 50, photoY: 42 },
+            'assets/greeting4.png': { fontSize: 50, posY: 68, posX: 50, photoSize: 100, photoX: 50, photoY: 28 },
+            'assets/greeting5.png': { fontSize: 50, posY: 80, posX: 50, photoSize: 100, photoX: 50, photoY: 40 },
+            'assets/greeting6.png': { fontSize: 54, posY: 74, posX: 50, photoSize: 110, photoX: 50, photoY: 34 },
+            'assets/greeting7.png': { fontSize: 50, posY: 70, posX: 50, photoSize: 100, photoX: 50, photoY: 30 },
+            'assets/greeting8.png': { fontSize: 46, posY: 84, posX: 50, photoSize: 90,  photoX: 50, photoY: 44 },
+            'assets/greeting9.png': { fontSize: 52, posY: 77, posX: 50, photoSize: 105, photoX: 50, photoY: 37 },
             'default': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35 }
         };
 
@@ -646,13 +647,47 @@
         const customTemplateInput = document.getElementById('customTemplateInput');
         const autoLayoutBtn = document.getElementById('autoLayoutBtn');
 
-        function applyAutoLayoutSystem() {
+        // دالة "الذكاء الاصطناعي" لتحليل ألوان الخلفية واختيار أفضل نص متباين
+        function getAIContrastColor(xPercent, yPercent) {
+            if (!imageLoaded) return '#ffffff';
+            
+            // رسم عينة سريعة للخلفية في الذاكرة لفحص اللون
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tCtx = tempCanvas.getContext('2d');
+            tCtx.drawImage(bgImage, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            const x = tempCanvas.width * (xPercent / 100);
+            const y = tempCanvas.height * (yPercent / 100);
+            
+            // سحب عينة من البكسلات حول موقع النص
+            const sampleSize = 40;
+            const imgData = tCtx.getImageData(
+                Math.max(0, x - sampleSize/2), 
+                Math.max(0, y - sampleSize/2), 
+                sampleSize, sampleSize
+            ).data;
+            
+            let totalLuminance = 0;
+            for (let i = 0; i < imgData.length; i += 4) {
+                totalLuminance += (0.299 * imgData[i] + 0.587 * imgData[i+1] + 0.114 * imgData[i+2]);
+            }
+            const avgLuminance = totalLuminance / (imgData.length / 4);
+            
+            // إذا كانت الخلفية فاتحة جداً، استخدم ألواناً داكنة ذهبية أو سوداء
+            if (avgLuminance > 180) return '#b8860b'; // DarkGoldenRod
+            if (avgLuminance > 120) return '#2c3e50'; // Dark Blue/Slate
+            return '#ffffff'; // أبيض للخلفيات الغامقة
+        }
+
+        async function applyAutoLayoutSystem() {
             const currentSrc = bgImage.getAttribute('src');
             const config = autoLayouts[currentSrc] || autoLayouts['default'];
             
-            // تطبيق القيم على السلايدرز
+            // 1. تطبيق الموقع والحجم أولاً
             fontSizeSlider.value = config.fontSize;
-            posYSlider.value = isUserPhotoLoaded ? Math.min(config.posY + 5, 95) : config.posY;
+            posYSlider.value = isUserPhotoLoaded ? Math.min(config.posY + 8, 95) : config.posY;
             posXSlider.value = config.posX;
             
             if (isUserPhotoLoaded) {
@@ -660,7 +695,20 @@
                 photoXSlider.value = config.photoX;
                 photoYSlider.value = config.photoY;
             }
+
+            // 2. تحليل الألوان تلقائياً واختيار الأفضل (الذكاء الاصطناعي)
+            const bestColor = getAIContrastColor(posXSlider.value, posYSlider.value);
+            colorInput.value = bestColor;
             
+            // إظهار تنبيه بسيط للمستخدم بأن الذكاء الاصطناعي انتهى من التنسيق
+            const originalText = autoLayoutBtn.innerHTML;
+            autoLayoutBtn.innerHTML = '✨ تم ضبط التنسيق واللون ذكياً!';
+            autoLayoutBtn.style.backgroundColor = '#2ecc71';
+            setTimeout(() => {
+                autoLayoutBtn.innerHTML = originalText;
+                autoLayoutBtn.style.backgroundColor = '#27ae60';
+            }, 2000);
+
             if (nameInput.value.trim()) drawCard();
         }
 
