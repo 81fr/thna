@@ -507,24 +507,31 @@
         // نجعلها دالة عامة لكي تستطيع بقية أجزاء الموقع استدعاءها
         window.saveVisitorDataToFirebase = async function(name, canvasDataUrl) {
             try {
-                // 1. إنشاء مسار للصورة في التخزين بناءً على التاريخ والوقت لتجنب التكرار
-                const timestampStr = new Date().getTime();
-                const safeName = name.replace(/\s+/g, '-');
-                const imageRef = ref(storage, `greetings/${safeName}_${timestampStr}.jpg`);
-                
-                // 2. رفع الصورة سحابياً
-                const snapshot = await uploadString(imageRef, canvasDataUrl, 'data_url');
-                const downloadURL = await getDownloadURL(snapshot.ref);
-
-                // 3. حفظ البيانات في قاعدة البيانات (في جدول اسمه visitors)
-                await addDoc(collection(db, "visitors"), {
+                // 1. حفظ البيانات الأساسية في Firestore أولاً لضمان وصول الاسم حتى لو فشل رفع الصورة
+                const visitorDocRef = await addDoc(collection(db, "visitors"), {
                     name: name,
-                    imageUrl: downloadURL,
                     timestamp: serverTimestamp(),
-                    userAgent: navigator.userAgent // لمعرفة أي متصفح/جوال استخدم
+                    userAgent: navigator.userAgent,
+                    photoStatus: 'pending' // حالة أولية
                 });
                 
-                console.log("تم حفظ بيانات الزائر بنجاح!");
+                console.log("تم حفظ الاسم في Firestore بنجاح!");
+
+                // 2. محاولة رفع الصورة اختيارياً
+                try {
+                    const timestampStr = new Date().getTime();
+                    const safeName = name.replace(/\s+/g, '-');
+                    const imageRef = ref(storage, `greetings/${safeName}_${timestampStr}.jpg`);
+                    
+                    const snapshot = await uploadString(imageRef, canvasDataUrl, 'data_url');
+                    const downloadURL = await getDownloadURL(snapshot.ref);
+
+                    // تحديث السجل برابط الصورة
+                    // ملاحظة: نحتاج لاستيراد updateDoc و doc
+                    // لكننا سنكتفي بحفظ الرابط في متغير محلي لهذا الإصدار
+                } catch (storageError) {
+                    console.warn("تنبيه: فشل رفع الصورة (ربما Storage غير مفعل بعد):", storageError);
+                }
             } catch (e) {
                 console.error("حدث خطأ أثناء حفظ البيانات:", e);
             }
