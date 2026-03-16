@@ -458,11 +458,12 @@
                 <input type="color" id="colorInput" value="#ffffff">
             </div>
 
-            <label>الموقع العمودي (أعلى/أسفل)</label>
-            <input type="range" id="posY" min="0" max="100" value="75">
-            
             <label>الموقع الأفقي (يمين/يسار)</label>
             <input type="range" id="posX" min="0" max="100" value="50">
+            
+            <button id="autoLayoutBtn" style="background-color: #27ae60; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 5px;">
+                <span>✨</span> تنظيم تلقائي (أفضل وضع)
+            </button>
         </div>
 
         <div style="margin-top: 30px; font-size: 13px; color: #7f8c8d; padding-top: 15px; border-top: 1px solid #eee;">
@@ -624,9 +625,43 @@
             }
         });
 
-        // --- Template Selection Logic --- //
+        // --- Template Selection & Auto Layout Logic --- //
+        const autoLayouts = {
+            'assets/greeting.png': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35 },
+            'assets/greeting2.png': { fontSize: 45, posY: 70, posX: 50, photoSize: 90, photoX: 50, photoY: 30 },
+            'assets/greeting3.png': { fontSize: 55, posY: 80, posX: 50, photoSize: 110, photoX: 50, photoY: 40 },
+            'assets/greeting4.png': { fontSize: 50, posY: 65, posX: 50, photoSize: 100, photoX: 50, photoY: 25 },
+            'assets/greeting5.png': { fontSize: 48, posY: 78, posX: 50, photoSize: 95, photoX: 50, photoY: 38 },
+            'assets/greeting6.png': { fontSize: 52, posY: 72, posX: 50, photoSize: 105, photoX: 50, photoY: 32 },
+            'assets/greeting7.png': { fontSize: 50, posY: 68, posX: 50, photoSize: 100, photoX: 50, photoY: 28 },
+            'assets/greeting8.png': { fontSize: 45, posY: 82, posX: 50, photoSize: 90, photoX: 50, photoY: 42 },
+            'assets/greeting9.png': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35 },
+            'default': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35 }
+        };
+
         const templateThumbs = document.querySelectorAll('.template-thumb');
         const customTemplateInput = document.getElementById('customTemplateInput');
+        const autoLayoutBtn = document.getElementById('autoLayoutBtn');
+
+        function applyAutoLayoutSystem() {
+            const currentSrc = bgImage.getAttribute('src');
+            const config = autoLayouts[currentSrc] || autoLayouts['default'];
+            
+            // تطبيق القيم على السلايدرز
+            fontSizeSlider.value = config.fontSize;
+            posYSlider.value = isUserPhotoLoaded ? Math.min(config.posY + 5, 95) : config.posY;
+            posXSlider.value = config.posX;
+            
+            if (isUserPhotoLoaded) {
+                photoSizeSlider.value = config.photoSize;
+                photoXSlider.value = config.photoX;
+                photoYSlider.value = config.photoY;
+            }
+            
+            if (nameInput.value.trim()) drawCard();
+        }
+
+        autoLayoutBtn.addEventListener('click', applyAutoLayoutSystem);
 
         function loadTemplate(src) {
             loadingMsg.style.display = 'block';
@@ -635,6 +670,10 @@
             imageLoaded = false;
             
             bgImage.src = src;
+            bgImage.setAttribute('src', src); // للتأكد من سهولة جلب الرابط لاحقاً
+            
+            // تطبيق التنسيق التلقائي عند تبديل النموذج
+            setTimeout(applyAutoLayoutSystem, 100);
         }
 
         templateThumbs.forEach(thumb => {
@@ -670,6 +709,10 @@
                     userPhotoImg.onload = function() {
                         isUserPhotoLoaded = true;
                         photoSettingsPanel.style.display = 'block';
+                        
+                        // تطبيق التنسيق التلقائي فوراً عند رفع الصورة ليتناسب مع وجودها
+                        applyAutoLayoutSystem();
+                        
                         // نرسم البطاقة فوراً (حتى لو لم يكتب اسمه، لتظهر الصورة)
                         if (nameInput.value.trim() || previewContainer.style.display === 'block') {
                             drawCard(nameInput.value.trim() || ' ');
