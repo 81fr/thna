@@ -484,6 +484,53 @@
         </div>
     </div>
 
+    <!-- Firebase SDK (Version 9 Modular JS API) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHnYqiE17Jp1INIqX2Goms-KEdE-Tvk1k",
+            authDomain: "thna-27e30.firebaseapp.com",
+            projectId: "thna-27e30",
+            storageBucket: "thna-27e30.firebasestorage.app",
+            messagingSenderId: "446731016648",
+            appId: "1:446731016648:web:7591f59ade98913fa848fd",
+            measurementId: "G-9XR4SZK1GC"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // نجعلها دالة عامة لكي تستطيع بقية أجزاء الموقع استدعاءها
+        window.saveVisitorDataToFirebase = async function(name, canvasDataUrl) {
+            try {
+                // 1. إنشاء مسار للصورة في التخزين بناءً على التاريخ والوقت لتجنب التكرار
+                const timestampStr = new Date().getTime();
+                const safeName = name.replace(/\s+/g, '-');
+                const imageRef = ref(storage, `greetings/${safeName}_${timestampStr}.jpg`);
+                
+                // 2. رفع الصورة سحابياً
+                const snapshot = await uploadString(imageRef, canvasDataUrl, 'data_url');
+                const downloadURL = await getDownloadURL(snapshot.ref);
+
+                // 3. حفظ البيانات في قاعدة البيانات (في جدول اسمه visitors)
+                await addDoc(collection(db, "visitors"), {
+                    name: name,
+                    imageUrl: downloadURL,
+                    timestamp: serverTimestamp(),
+                    userAgent: navigator.userAgent // لمعرفة أي متصفح/جوال استخدم
+                });
+                
+                console.log("تم حفظ بيانات الزائر بنجاح!");
+            } catch (e) {
+                console.error("حدث خطأ أثناء حفظ البيانات:", e);
+            }
+        };
+    </script>
+
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
@@ -657,6 +704,15 @@
             ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
         }
 
+        // --- Firebase Integration Helper ---
+        let lastSavedName = '';
+        function trySaveToFirebase(name, dataUrl) {
+            if (name && name !== lastSavedName && window.saveVisitorDataToFirebase) {
+                window.saveVisitorDataToFirebase(name, dataUrl);
+                lastSavedName = name;
+            }
+        }
+
         // --- Single Image Logic --- //
         function drawCard(nameParam = null) {
             if (!imageLoaded) return;
@@ -756,6 +812,10 @@
             if (!nameParam) {
                 previewContainer.style.display = 'block';
                 downloadBtn.style.display = 'block';
+                
+                // حفظ البيانات في فايربيس في الخلفية
+                const currentDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                trySaveToFirebase(name, currentDataUrl);
             }
         }
 
