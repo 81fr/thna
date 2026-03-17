@@ -564,7 +564,7 @@
             'assets/greeting7.png': { fontSize: 46, posY: 88, posX: 50, photoSize: 100, photoX: 50, photoY: 32, color: '#ffffff' },
             'assets/greeting8.png': { fontSize: 46, posY: 78, posX: 50, photoSize: 90,  photoX: 50, photoY: 44, color: '#ffffff' },
             'assets/greeting9.png': { fontSize: 46, posY: 80, posX: 50, photoSize: 105, photoX: 50, photoY: 37, color: '#2c5f6a' },
-            'default': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35, color: '#ffffff' }
+            'default': { fontSize: 58, posY: 58, posX: 50, photoSize: 100, photoX: 50, photoY: 35, color: '#ffffff' }
         };
 
         // --- Core Functions ---
@@ -692,6 +692,8 @@
         async function initTemplateConfigs() {
             const remoteConfigs = await loadTemplateConfigsFromFirebase();
             Object.keys(remoteConfigs).forEach(id => {
+                // تذكير: لا تقم بتجاوز القالب الأول إذا كان مخزناً بقيم قديمة
+                if (id === 'assets/greeting.png') return;
                 autoLayouts[id] = remoteConfigs[id];
             });
             if (imageLoaded) applyAutoLayoutSystem();
