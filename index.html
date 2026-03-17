@@ -13,483 +13,558 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
+        :root {
+            --primary: #3498db;
+            --primary-dark: #2980b9;
+            --secondary: #2ecc71;
+            --secondary-dark: #27ae60;
+            --accent: #e67e22;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --text-main: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --shadow-soft: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+
         @font-face {
             font-family: 'SymbioAR+LT-Black';
             src: url('assets/SymbioAR+LT-Black.otf') format('opentype');
             font-weight: normal;
             font-style: normal;
+            font-display: swap;
         }
 
         body {
-            font-family: 'SymbioAR+LT-Black', 'SymbioAR LT Black', 'Tajawal', sans-serif;
-            background-color: #f0f4f8;
+            font-family: 'Tajawal', 'SymbioAR+LT-Black', sans-serif;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
             margin: 0;
             padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: flex-start;
             min-height: 100vh;
+            color: var(--text-main);
         }
 
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-            max-width: 500px;
+        /* Glassmorphism Container */
+        .app-wrapper {
+            display: flex;
+            flex-direction: row-reverse; /* Sidebar on the right for RTL */
+            gap: 25px;
+            max-width: 1200px;
             width: 100%;
+            margin-top: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            padding: 30px;
+            border-radius: 24px;
+            box-shadow: var(--shadow-soft);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar {
+            width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: var(--shadow-soft);
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 10px;
             text-align: center;
         }
 
-        .header {
-            margin-bottom: 25px;
-            color: #2c3e50;
-        }
-
         .header h1 {
-            margin: 0 0 10px 0;
-            font-size: 24px;
+            margin: 0 0 8px 0;
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(to left, #2c3e50, #3498db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .header p {
             margin: 0;
-            color: #7f8c8d;
+            color: var(--text-secondary);
             font-size: 15px;
         }
 
+        /* Input Styles */
         .input-group {
-            margin-bottom: 20px;
+            position: relative;
         }
 
         input[type="text"] {
-            width: 90%;
-            padding: 15px;
-            border: 2px solid #e0e6ed;
-            border-radius: 10px;
+            width: 100%;
+            padding: 16px;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 12px;
             font-size: 16px;
             font-family: inherit;
             text-align: center;
-            transition: all 0.3s;
+            background: rgba(255,255,255,0.8);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-sizing: border-box;
         }
 
         input[type="text"]:focus {
             outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.15);
+            background: white;
+            transform: translateY(-1px);
         }
 
-        button {
-            background-color: #3498db;
-            color: white;
+        /* Buttons Style */
+        .btn {
             border: none;
-            padding: 15px 30px;
-            border-radius: 10px;
+            padding: 14px 28px;
+            border-radius: 12px;
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 700;
             font-family: inherit;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             width: 100%;
-            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
 
-        button:hover {
-            background-color: #2980b9;
+        .btn-primary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
         }
 
-        button:disabled {
-            background-color: #95a5a6;
+        .btn-success {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
+        }
+
+        .btn-success:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(46, 204, 113, 0.4);
+        }
+
+        .btn:disabled {
+            background: #cbd5e0;
+            color: #718096;
             cursor: not-allowed;
-            transform: none !important;
-            box-shadow: none !important;
+            box-shadow: none;
         }
 
-        .download-btn {
-            background-color: #2ecc71;
-            display: none;
-        }
-
-        .download-btn:hover {
-            background-color: #27ae60;
-            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
-        }
-
-        .batch-btn {
-            background-color: #9b59b6;
-        }
-
-        .batch-btn:hover {
-            background-color: #8e44ad;
-            box-shadow: 0 5px 15px rgba(155, 89, 182, 0.3);
-        }
-
-        .preview-container {
-            margin: 20px 0;
-            border-radius: 10px;
+        /* Preview Area */
+        .preview-area {
+            position: relative;
+            width: 100%;
+            background: #fff;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 5px 20px rgba(52, 152, 219, 0.2);
-            display: none;
-            position: sticky;
-            top: 10px;
-            z-index: 1000;
-            background: white;
-            border: 3px solid #3498db;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(0,0,0,0.05);
         }
 
         canvas {
             max-width: 100%;
             height: auto;
-            max-height: 45vh;
-            object-fit: contain;
             display: block;
-            margin: 0 auto;
+            transition: opacity 0.3s ease;
         }
 
-        .controls {
-            display: none;
-            margin-top: 15px;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: right;
-        }
-
-        .controls label {
-            display: block;
+        /* Template Grid */
+        .template-selector {
             margin-bottom: 5px;
-            font-size: 14px;
-            color: #34495e;
         }
 
-        .controls input[type="range"] {
+        .templates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+            gap: 12px;
+            max-height: 220px;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+
+        .templates-grid::-webkit-scrollbar {
+            width: 6px;
+        }
+        .templates-grid::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 10px;
+        }
+
+        .template-thumb {
             width: 100%;
-            margin-bottom: 10px;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
         }
 
-        .controls .font-upload-wrapper {
-            margin-bottom: 15px;
-            text-align: right;
+        .template-thumb:hover {
+            transform: scale(1.08) rotate(1deg);
+            z-index: 10;
         }
 
-        .controls .color-picker-wrapper {
-            margin-bottom: 15px;
+        .template-thumb.active {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(52,152,219,0.4);
+            transform: scale(1.05);
+        }
+
+        /* Controls Panel */
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 5px;
+            outline: none;
+            margin: 10px 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 6px rgba(52,152,219,0.3);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: var(--primary-dark);
+        }
+
+        .color-picker-wrapper {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
+            justify-content: space-between;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        input[type="color"] {
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+            padding: 0;
+        }
+
+        /* Uploaders */
+        .upload-section {
+            display: flex;
+            flex-direction: column;
             gap: 10px;
         }
 
-        .controls input[type="color"] {
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+        .custom-upload {
+            position: relative;
+            background: #f8fafc;
+            border: 2px dashed #cbd5e2;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
             cursor: pointer;
-            padding: 0;
-            background: none;
-        }
-
-        .controls input[type="file"] {
-            display: none;
-        }
-
-        .controls .font-upload-wrapper label {
-            background-color: #34495e;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: inline-block;
-            font-size: 13px;
             transition: all 0.3s;
-            margin-top: 5px;
         }
 
-        .controls .font-upload-wrapper label:hover {
-            background-color: #2c3e50;
+        .custom-upload:hover {
+            border-color: var(--primary);
+            background: #eff6ff;
         }
-        
-        #currentFontName {
-            font-size: 12px;
-            color: #27ae60;
-            display: block;
-            margin-top: 5px;
-            font-weight: bold;
+
+        .custom-upload label {
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #475569;
         }
 
         #loadingMsg {
-            color: #e67e22;
-            font-size: 14px;
-            margin-bottom: 15px;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            z-index: 2000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-weight: 700;
             display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100%); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
         }
 
         .divider {
             margin: 20px 0;
-            border-top: 2px dashed #ecf0f1;
+            border-top: 1px solid #e2e8f0;
             position: relative;
+            text-align: center;
         }
 
         .divider span {
-            background: white;
-            padding: 0 10px;
-            color: #bdc3c7;
-            position: absolute;
+            position: relative;
             top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 14px;
-        }
-
-        .file-upload-wrapper {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px dashed #bdc3c7;
-            margin-bottom: 15px;
-        }
-
-        .file-upload-wrapper input[type="file"] {
-            display: none;
-        }
-
-        .file-upload-wrapper label {
-            color: #34495e;
-            cursor: pointer;
-            display: block;
-            font-weight: bold;
-        }
-
-        .file-upload-wrapper p {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-top: 5px;
-        }
-
-        #batchProgress {
-            background: #ecf0f1;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            font-size: 14px;
-            color: #2c3e50;
-            display: none;
-            font-weight: bold;
-        }
-
-        .template-selector {
-            margin-bottom: 20px;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-        }
-
-        .template-selector p {
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-weight: bold;
-            color: #34495e;
-            font-size: 14px;
-        }
-
-        .templates-grid {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        .template-thumb {
-            width: 70px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 3px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .template-thumb:hover {
-            transform: scale(1.05);
-        }
-
-        .template-thumb.active {
-            border-color: #3498db;
-            box-shadow: 0 0 10px rgba(52,152,219,0.5);
-        }
-
-        .custom-template-wrapper input[type="file"] {
-            display: none;
-        }
-
-        .custom-template-wrapper label {
-            background-color: #ecf0f1;
-            color: #2c3e50;
-            padding: 8px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: inline-block;
+            background: #fdfdfd;
+            padding: 0 15px;
+            color: #94a3b8;
             font-size: 13px;
-            font-weight: bold;
-            transition: all 0.3s;
-            border: 1px solid #bdc3c7;
+            font-weight: 600;
         }
 
-        .custom-template-wrapper label:hover {
-            background-color: #e0e6ed;
+        /* Responsive Layout */
+        @media (max-width: 1000px) {
+            .app-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+            .sidebar {
+                width: 100%;
+                max-width: 500px;
+            }
+            .main-content {
+                max-width: 500px;
+                width: 100%;
+            }
         }
 
-        .photo-settings {
-            display: none;
-            background: #eef2f5;
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            text-align: right;
-            border: 1px solid #dcdde1;
+        @media (max-width: 500px) {
+            body { padding: 10px; }
+            .header h1 { font-size: 22px; }
+            .main-content { padding: 20px; }
         }
 
-        .photo-settings label {
-            font-size: 13px;
-            color: #2c3e50;
-            display: block;
-            margin-bottom: 5px;
+        /* Fix compatibility */
+        .header h1 {
+            -webkit-background-clip: text;
+            background-clip: text;
         }
-
-        .photo-settings input[type="range"] {
-            margin-bottom: 10px;
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="container">
-        <div class="header">
-            <h1>إنشاء بطاقة التهنئة</h1>
-            <p>يمكنك إنشاء بطاقة مفردة أو تحميل أسماء موظفين من ملف Excel</p>
-        </div>
+    <div id="loadingMsg">جاري تحميل صورة التهنئة...</div>
 
-        <div id="loadingMsg">جاري تحميل صورة التهنئة...</div>
-
-        <!-- اختيار النموذج -->
-        <div class="template-selector">
-            <p>اختر تصميم المعايدة:</p>
-            <div class="templates-grid" style="max-height: 250px; overflow-y: auto; padding: 5px;">
-                <img src="assets/greeting.png" class="template-thumb active" data-src="assets/greeting.png" alt="التصميم الأساسي 1">
-                <img src="assets/greeting2.png" class="template-thumb" data-src="assets/greeting2.png" alt="التصميم الأساسي 2">
-                <img src="assets/greeting3.png" class="template-thumb" data-src="assets/greeting3.png" alt="التصميم الأساسي 3">
-                <img src="assets/greeting4.png" class="template-thumb" data-src="assets/greeting4.png" alt="التصميم الأساسي 4">
-                <img src="assets/greeting5.png" class="template-thumb" data-src="assets/greeting5.png" alt="التصميم الأساسي 5">
-                <img src="assets/greeting6.png" class="template-thumb" data-src="assets/greeting6.png" alt="التصميم الأساسي 6">
-                <img src="assets/greeting7.png" class="template-thumb" data-src="assets/greeting7.png" alt="التصميم الأساسي 7">
-                <img src="assets/greeting8.png" class="template-thumb" data-src="assets/greeting8.png" alt="التصميم الأساسي 8">
-                <img src="assets/greeting9.png" class="template-thumb" data-src="assets/greeting9.png" alt="التصميم الأساسي 9">
-            </div>
-            
-            <div class="custom-template-wrapper">
-                <input type="file" id="customTemplateInput" accept="image/*">
-                <label for="customTemplateInput">🖼️ إضافة نموذج خاص بك</label>
-            </div>
-
-            <div class="custom-template-wrapper" style="margin-top: 10px;">
-                <input type="file" id="userPhotoInput" accept="image/*">
-                <label for="userPhotoInput" style="background-color: #3498db; color: white; border-color: #2980b9;">👤 إضافة صورة شخصية (دائرية)</label>
-            </div>
-            
-            <div class="photo-settings" id="photoSettingsPanel">
-                <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #2980b9;">إعدادات الصورة الشخصية:</p>
-                <label>حجم الصورة</label>
-                <input type="range" id="photoSize" min="10" max="400" value="100">
+    <div class="app-wrapper">
+        <!-- Sidebar: Templates & Configurations -->
+        <aside class="sidebar">
+            <!-- Template Selection Card -->
+            <div class="glass-card template-selector">
+                <p>🎨 اختر تصميم المعايدة:</p>
+                <div class="templates-grid">
+                    <img src="assets/greeting.png" class="template-thumb active" data-src="assets/greeting.png" alt="1">
+                    <img src="assets/greeting2.png" class="template-thumb" data-src="assets/greeting2.png" alt="2">
+                    <img src="assets/greeting3.png" class="template-thumb" data-src="assets/greeting3.png" alt="3">
+                    <img src="assets/greeting4.png" class="template-thumb" data-src="assets/greeting4.png" alt="4">
+                    <img src="assets/greeting5.png" class="template-thumb" data-src="assets/greeting5.png" alt="5">
+                    <img src="assets/greeting6.png" class="template-thumb" data-src="assets/greeting6.png" alt="6">
+                    <img src="assets/greeting7.png" class="template-thumb" data-src="assets/greeting7.png" alt="7">
+                    <img src="assets/greeting8.png" class="template-thumb" data-src="assets/greeting8.png" alt="8">
+                    <img src="assets/greeting9.png" class="template-thumb" data-src="assets/greeting9.png" alt="9">
+                </div>
                 
-                <label>الموقع الأفقي (يمين/يسار)</label>
-                <input type="range" id="photoX" min="0" max="100" value="50">
+                <div class="upload-section" style="margin-top: 20px;">
+                    <div class="custom-upload">
+                        <input type="file" id="customTemplateInput" accept="image/*" style="display:none">
+                        <label for="customTemplateInput">🖼️ إضافة نموذج خاص بك</label>
+                    </div>
+                    <div class="custom-upload" style="background: #e0f2fe; border-color: #bae6fd;">
+                        <input type="file" id="userPhotoInput" accept="image/*" style="display:none">
+                        <label for="userPhotoInput" style="color: #0369a1;">👤 إضافة صورة شخصية (دائرية)</label>
+                    </div>
+                </div>
+
+                <div class="photo-settings" id="photoSettingsPanel" style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                    <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: var(--primary);">إعدادات الصورة الشخصية:</p>
+                    <div class="control-group">
+                        <label>حجم الصورة</label>
+                        <input type="range" id="photoSize" min="10" max="400" value="100">
+                    </div>
+                    <div class="control-group">
+                        <label>الموقع الأفقي</label>
+                        <input type="range" id="photoX" min="0" max="100" value="50">
+                    </div>
+                    <div class="control-group">
+                        <label>الموقع العمودي</label>
+                        <input type="range" id="photoY" min="0" max="100" value="35">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Format Settings Card -->
+            <div class="glass-card" id="controlsPanel" style="display: none;">
+                <p style="font-size: 13px; font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 6px;">
+                    ⚙️ إعدادات النصوص
+                </p>
                 
-                <label>الموقع العمودي (أعلى/أسفل)</label>
-                <input type="range" id="photoY" min="0" max="100" value="35">
-            </div>
-        </div>
+                <div class="control-group">
+                    <div class="upload-section">
+                        <input type="file" id="fontInput" accept=".ttf, .otf, .woff, .woff2" style="display:none">
+                        <label for="fontInput" class="btn" style="background: #f1f5f9; color: #475569; font-size: 13px; padding: 10px;">🔤 رفع خط خاص (.ttf/.otf)</label>
+                        <span id="currentFontName" style="font-size:11px; text-align:center; color:#64748b; margin-top:-5px;">SymbioAR+LT-Black (الأساسي)</span>
+                    </div>
+                </div>
 
-        <!-- إنشاء بطاقة مفردة -->
-        <div class="input-group">
-            <input type="text" id="employeeName" placeholder="الاسم الكريم (مثال: محمد عبدالله)" autocomplete="off">
-        </div>
-        <button id="generateBtn" disabled>معاينة البطاقة</button>
-        <button id="downloadBtn" class="download-btn" style="margin-bottom: 20px;">تحميل بطاقة الاسم</button>
+                <div class="control-group">
+                    <label>حجم الخط <span id="fontSizeVal" style="color:var(--accent);">58</span></label>
+                    <input type="range" id="fontSize" min="20" max="150" value="58">
+                </div>
 
-        <div class="preview-container" id="previewContainer">
-            <canvas id="canvas"></canvas>
-        </div>
+                <div class="control-group">
+                    <label>لون النص</label>
+                    <div class="color-picker-wrapper">
+                        <span style="font-size:13px; color:#64748b;">اختر اللون:</span>
+                        <input type="color" id="colorInput" value="#ffffff">
+                    </div>
+                </div>
 
-        <div class="divider"><span>أو تحميل جماعي</span></div>
+                <div class="control-group">
+                    <label>الموقع العمودي <span id="posYVal" style="color:var(--accent);">58</span></label>
+                    <input type="range" id="posY" min="0" max="100" value="58">
+                </div>
 
-        <!-- التحميل الجماعي عن طريق إكسل -->
-        <div class="file-upload-wrapper">
-            <input type="file" id="excelInput" accept=".xlsx, .xls">
-            <label for="excelInput">📂 اختر ملف Excel (اضغط هنا)</label>
-            <p>يجب أن تكون الأسماء في العمود الأول للصفحة الأولى داخل الملف.</p>
-        </div>
+                <div class="control-group">
+                    <label>الموقع الأفقي <span id="posXVal" style="color:var(--accent);">50</span></label>
+                    <input type="range" id="posX" min="0" max="100" value="50">
+                </div>
 
-        <div id="batchProgress">جاري تجهيز الصور... <span id="progressCount">0</span>/<span id="totalCount">0</span>
-        </div>
-        <button id="batchDownloadBtn" class="batch-btn" style="display: none;" disabled>تحميل كل بطاقات القسم
-            (ZIP)</button>
-
-        <!-- إعدادات التنسيق -->
-        <div class="controls" id="controlsPanel">
-            <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px; text-align: center;">الإعدادات أدناه تطبق
-                على الصور المرفوعة جماعياً أيضاً</p>
+                <button id="autoLayoutBtn" class="btn" style="display: none; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; margin-bottom: 8px;">
+                    ✨ تنظيم تلقائي ذكي
+                </button>
                 
-            <div class="font-upload-wrapper">
-                <label style="color: #34495e; font-size: 14px; margin-bottom: 5px; background: none; padding: 0;">الخط المستخدم:</label>
-                <input type="file" id="fontInput" accept=".ttf, .otf, .woff, .woff2">
-                <label for="fontInput">🔤 رفع خط خاص بك (.ttf / .otf)</label>
-                <span id="currentFontName">SymbioAR+LT-Black (الأساسي)</span>
-            </div>
-            
-            <label>حجم الخط: <span id="fontSizeVal" style="color:#e67e22; font-weight:bold;">58</span></label>
-            <input type="range" id="fontSize" min="20" max="150" value="58">
-            
-            <div class="color-picker-wrapper">
-                <label for="colorInput" style="margin: 0; padding-top: 5px;">لون النص:</label>
-                <input type="color" id="colorInput" value="#ffffff">
+                <button id="saveLayoutBtn" class="btn" style="display: none; background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa;">
+                    💾 حفظ كتنسيق أساسي
+                </button>
             </div>
 
-            <label>الموقع العمودي (أعلى/أسفل): <span id="posYVal" style="color:#e67e22; font-weight:bold;">58</span></label>
-            <input type="range" id="posY" min="0" max="100" value="58">
-            
-            <label>الموقع الأفقي (يمين/يسار): <span id="posXVal" style="color:#e67e22; font-weight:bold;">50</span></label>
-            <input type="range" id="posX" min="0" max="100" value="50">
-            
-            <button id="autoLayoutBtn" style="display: none; background-color: #27ae60; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; width: 100%; transition: all 0.3s; align-items: center; justify-content: center; gap: 5px;">
-                <span>✨</span> تنظيم تلقائي (أفضل وضع)
-            </button>
-            
-            <button id="saveLayoutBtn" style="display: none; background-color: #e67e22; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; width: 100%; transition: all 0.3s; align-items: center; justify-content: center; gap: 5px;">
-                <span>💾</span> حفظ كتنسيق أساسي (للكل)
-            </button>
-        </div>
+            <!-- Batch Processing Card -->
+            <div class="glass-card">
+                <div class="divider"><span>تحميل جماعي</span></div>
+                <div class="custom-upload" style="border-style: dotted; margin-bottom: 15px;">
+                    <input type="file" id="excelInput" accept=".xlsx, .xls" style="display:none">
+                    <label for="excelInput">📂 اختر ملف Excel للأسماء</label>
+                </div>
+                
+                <div id="batchProgress" class="glass-card" style="display:none; padding: 10px; margin-bottom: 15px; background: #eff6ff; text-align: center; border: none;">
+                    جاري المعالجة: <span id="progressCount">0</span>/<span id="totalCount">0</span>
+                </div>
 
-        <div style="margin-top: 30px; font-size: 13px; color: #7f8c8d; padding-top: 15px; border-top: 1px solid #eee;">
-            <div style="margin-bottom: 10px;">
-                <!-- عداد الزوار المجاني -->
-                <img src="https://counter5.optistats.ovh/private/freecounterstat.php?c=5pmyk8wlgcufn267w7xgp19zfln8d8w8" border="0" title="free counter stat" alt="free counter stat" style="border-radius: 5px; opacity: 0.8; margin-bottom: 5px;">
-                <br>
-                صنع بكل حب بواسطة فيصل ❤️
+                <button id="batchDownloadBtn" class="btn btn-primary" style="display: none;" disabled>
+                    📦 تحميل ملف (ZIP)
+                </button>
             </div>
-            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-                <span>للتواصل والاستفسار:</span>
-                <span dir="ltr" style="font-weight: bold; color: #2c3e50;">0511799420</span>
-                <a href="https://wa.me/966511799420" target="_blank" style="text-decoration: none; display: flex; align-items: center;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#25D366" viewBox="0 0 16 16">
-                        <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
-                    </svg>
-                </a>
+        </aside>
+
+        <!-- Main Content: Name Input & Preview -->
+        <main class="main-content">
+            <header class="header">
+                <h1>إنشاء بطاقة التهنئة</h1>
+                <p>أدخل الاسم أدناه لصناعة بطاقة معايدة احترافية بلحظات</p>
+            </header>
+
+            <div class="glass-card">
+                <div class="input-group" style="margin-bottom: 15px;">
+                    <input type="text" id="employeeName" placeholder="اكتب الاسم هنا (مثال: محمد عبدالله)" autocomplete="off">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="generateBtn" class="btn btn-primary" disabled style="flex: 2;">معاينة البطاقة</button>
+                    <button id="downloadBtn" class="btn btn-success" style="display: none; flex: 1;">تحميل مباشر</button>
+                </div>
             </div>
-        </div>
+
+            <div class="preview-area" id="previewContainer" style="display: none;">
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <!-- Footer Info -->
+            <footer style="margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.05); text-align: center; color: var(--text-secondary); font-size: 13px;">
+                <div style="margin-bottom: 15px;">
+                    <img src="https://counter5.optistats.ovh/private/freecounterstat.php?c=5pmyk8wlgcufn267w7xgp19zfln8d8w8" border="0" title="free counter stat" alt="stats" style="border-radius: 8px; opacity: 0.6;">
+                    <p style="margin-top: 10px;">صنع بكل حب بواسطة فيصل ❤️</p>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; background: white; padding: 10px; border-radius: 50px; display: inline-flex; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+                    <span>للتواصل:</span>
+                    <span dir="ltr" style="font-weight: 700; color: var(--text-main);">0511799420</span>
+                    <a href="https://wa.me/966511799420" target="_blank" style="display: flex; align-items: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#25D366" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
+                    </a>
+                </div>
+            </footer>
+        </main>
     </div>
 
     <!-- Firebase SDK & Application Logic (Unified Module) -->
