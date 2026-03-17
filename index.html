@@ -492,7 +492,7 @@
         </div>
     </div>
 
-    <!-- Firebase SDK (Version 9 Modular JS API) -->
+    <!-- Firebase SDK & Application Logic (Unified Module) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, addDoc, serverTimestamp, getDocs, setDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
@@ -507,47 +507,50 @@
             measurementId: "G-9XR4SZK1GC"
         };
 
+        // --- Selectors ---
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const generateBtn = document.getElementById('generateBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const nameInput = document.getElementById('employeeName');
+        const previewContainer = document.getElementById('previewContainer');
+        const loadingMsg = document.getElementById('loadingMsg');
+        const controlsPanel = document.getElementById('controlsPanel');
+        const fontSizeSlider = document.getElementById('fontSize');
+        const posYSlider = document.getElementById('posY');
+        const posXSlider = document.getElementById('posX');
+        const excelInput = document.getElementById('excelInput');
+        const batchDownloadBtn = document.getElementById('batchDownloadBtn');
+        const batchProgress = document.getElementById('batchProgress');
+        const progressCount = document.getElementById('progressCount');
+        const totalCount = document.getElementById('totalCount');
+        const colorInput = document.getElementById('colorInput');
+        const fontInput = document.getElementById('fontInput');
+        const currentFontName = document.getElementById('currentFontName');
+        const userPhotoInput = document.getElementById('userPhotoInput');
+        const photoSettingsPanel = document.getElementById('photoSettingsPanel');
+        const photoSizeSlider = document.getElementById('photoSize');
+        const photoXSlider = document.getElementById('photoX');
+        const photoYSlider = document.getElementById('photoY');
+        const templateThumbs = document.querySelectorAll('.template-thumb');
+        const customTemplateInput = document.getElementById('customTemplateInput');
+        const autoLayoutBtn = document.getElementById('autoLayoutBtn');
+        const saveLayoutBtn = document.getElementById('saveLayoutBtn');
+
+        // --- State ---
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const scaleMultiplier = 1;
+        let bgImage = new Image();
+        let imageLoaded = false;
+        let fontLoaded = false;
+        let employeeNamesList = [];
+        let userPhotoImg = new Image();
+        let isUserPhotoLoaded = false;
+        let activeFontFamily = 'SymbioAR+LT-Black';
+        let lastSavedName = '';
 
-        // نجعلها دالة عامة لكي تستطيع بقية أجزاء الموقع استدعاءها
-        window.saveVisitorDataToFirebase = async function(name, canvasDataUrl) {
-            try {
-                // 1. ضغط الصورة بشكل أكبر لضمان توافقها مع حجم سجل Firestore (1MB)
-                // سنقوم بتحويل الكانفاس إلى JPEG بجودة متوسطة
-                const tempCanvas = document.createElement('canvas');
-                const img = new Image();
-                
-                await new Promise((resolve) => {
-                    img.onload = resolve;
-                    img.src = canvasDataUrl;
-                });
-
-                tempCanvas.width = img.width;
-                tempCanvas.height = img.height;
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.drawImage(img, 0, 0);
-                
-                // جودة 0.4 تعطي حجم ملف صغير جداً (حوالي 100-200 كيلوبايت) وهو ممتاز للبيانات
-                const compressedBase64 = tempCanvas.toDataURL('image/jpeg', 0.4);
-
-                // 2. حفظ البيانات في Firestore مباشرة (الاسم + كود الصورة)
-                await addDoc(collection(db, "visitors"), {
-                    name: name,
-                    imageData: compressedBase64, // حفظ الصورة كنص داخل السجل
-                    timestamp: serverTimestamp(),
-                    userAgent: navigator.userAgent
-                });
-                
-                console.log("تم حفظ بيانات الزائر والصورة بنجاح في Firestore!");
-            } catch (e) {
-                console.error("Error loading template configs:", e);
-                return {};
-            }
-        }
-
-        // --- AI-Powered Template Selection & Auto Layout Logic --- //
-        // إحداثيات محسنة بدقة (X, Y%) لكل نموذج
+        // --- Auto Layout Configs ---
         const autoLayouts = {
             'assets/greeting.png':  { fontSize: 50, posY: 78, posX: 50, photoSize: 100, photoX: 50, photoY: 30, color: '#ffffff' },
             'assets/greeting2.png': { fontSize: 45, posY: 73, posX: 50, photoSize: 95,  photoX: 50, photoY: 34, color: '#7a5c43' },
@@ -561,7 +564,14 @@
             'default': { fontSize: 50, posY: 75, posX: 50, photoSize: 100, photoX: 50, photoY: 35, color: '#ffffff' }
         };
 
-        // دالة "الذكاء الاصطناعي" لتحليل ألوان الخلفية واختيار أفضل نص متباين
+        // --- Core Functions ---
+        function setupCanvas() {
+            canvas.width = bgImage.width * scaleMultiplier;
+            canvas.height = bgImage.height * scaleMultiplier;
+            canvas.style.width = bgImage.width + 'px';
+            ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
+        }
+
         function getAIContrastColor(xPercent, yPercent) {
             if (!imageLoaded) return '#ffffff';
             const tempCanvas = document.createElement('canvas');
@@ -587,7 +597,7 @@
             return '#ffffff';
         }
 
-        window.applyAutoLayoutSystem = async function() {
+        async function applyAutoLayoutSystem() {
             const currentSrc = bgImage.getAttribute('src');
             const config = autoLayouts[currentSrc] || autoLayouts['default'];
             fontSizeSlider.value = config.fontSize;
@@ -604,7 +614,6 @@
                 const bestColor = getAIContrastColor(posXSlider.value, posYSlider.value);
                 colorInput.value = bestColor;
             }
-            const autoLayoutBtn = document.getElementById('autoLayoutBtn');
             const originalText = autoLayoutBtn.innerHTML;
             autoLayoutBtn.innerHTML = '✨ تم ضبط التنسيق واللون ذكياً!';
             autoLayoutBtn.style.backgroundColor = '#2ecc71';
@@ -615,142 +624,204 @@
             if (nameInput.value.trim()) drawCard();
         }
 
-        // منطق حفظ التنسيق الحالي كافتراضي
-        document.getElementById('saveLayoutBtn').addEventListener('click', async () => {
-            const currentSrc = bgImage.getAttribute('src');
-            if (!currentSrc) return;
-            const config = {
-                fontSize: parseInt(fontSizeSlider.value),
-                posY: parseInt(posYSlider.value),
-                posX: parseInt(posXSlider.value),
-                photoSize: parseInt(photoSizeSlider.value),
-                photoX: parseInt(photoXSlider.value),
-                photoY: parseInt(photoYSlider.value),
-                color: colorInput.value
-            };
-            const btn = document.getElementById('saveLayoutBtn');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⌛ جاري الحفظ...';
-            btn.disabled = true;
-            const success = await window.saveTemplateConfigToFirebase(currentSrc, config);
-            if (success) {
-                autoLayouts[currentSrc] = config;
-                btn.innerHTML = '✅ تم الحفظ كافتراضي!';
-                btn.style.backgroundColor = '#27ae60';
-            } else {
-                btn.innerHTML = '❌ فشل الحفظ';
-                btn.style.backgroundColor = '#e74c3c';
+        // --- Firebase Functions ---
+        window.saveVisitorDataToFirebase = async function(name, canvasDataUrl) {
+            try {
+                const tempCanvas = document.createElement('canvas');
+                const img = new Image();
+                await new Promise((resolve) => {
+                    img.onload = resolve;
+                    img.src = canvasDataUrl;
+                });
+                tempCanvas.width = img.width;
+                tempCanvas.height = img.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(img, 0, 0);
+                const compressedBase64 = tempCanvas.toDataURL('image/jpeg', 0.4);
+                await addDoc(collection(db, "visitors"), {
+                    name: name,
+                    imageData: compressedBase64,
+                    timestamp: serverTimestamp(),
+                    userAgent: navigator.userAgent
+                });
+                console.log("تم حفظ بيانات الزائر بنجاح!");
+            } catch (e) {
+                console.error("Error saving visitor data:", e);
             }
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.style.backgroundColor = '#e67e22';
-                btn.disabled = false;
-            }, 2000);
-        });
+        }
 
-        // دالة لتهيئة الإعدادات من فايربيس
-        window.initTemplateConfigs = async function() {
-            const remoteConfigs = await window.loadTemplateConfigsFromFirebase();
+        async function saveTemplateConfigToFirebase(templateId, config) {
+            try {
+                const docId = templateId.replace(/\//g, '_');
+                await setDoc(doc(db, "template_configs", docId), {
+                    ...config,
+                    updatedAt: serverTimestamp()
+                });
+                return true;
+            } catch (e) {
+                console.error("Error saving template config:", e);
+                return false;
+            }
+        }
+
+        async function loadTemplateConfigsFromFirebase() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "template_configs"));
+                const configs = {};
+                querySnapshot.forEach((doc) => {
+                    const templateId = doc.id.replace(/_/g, '/');
+                    configs[templateId] = doc.data();
+                });
+                return configs;
+            } catch (e) {
+                console.error("Error loading template configs:", e);
+                return {};
+            }
+        }
+
+        async function initTemplateConfigs() {
+            const remoteConfigs = await loadTemplateConfigsFromFirebase();
             Object.keys(remoteConfigs).forEach(id => {
                 autoLayouts[id] = remoteConfigs[id];
             });
             if (imageLoaded) applyAutoLayoutSystem();
         }
 
-        // تشغيل الجلب عند بدء الموقع
-        initTemplateConfigs();
-
-        window.loadTemplate = function(src) {
+        function loadTemplate(src) {
             loadingMsg.style.display = 'block';
+            loadingMsg.textContent = 'جاري تحميل صورة التهنئة...';
             generateBtn.disabled = true;
             batchDownloadBtn.disabled = true;
             imageLoaded = false;
-            bgImage.src = src;
+            
             bgImage.setAttribute('src', src);
-            setTimeout(applyAutoLayoutSystem, 100);
+            bgImage.crossOrigin = "anonymous";
+            bgImage.src = src;
+            
+            setTimeout(() => {
+                if (!imageLoaded) applyAutoLayoutSystem();
+            }, 500);
         }
-    </script>
 
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const generateBtn = document.getElementById('generateBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const nameInput = document.getElementById('employeeName');
-        const previewContainer = document.getElementById('previewContainer');
-        const loadingMsg = document.getElementById('loadingMsg');
+        // --- bgImage Handlers ---
+        bgImage.onload = () => {
+            imageLoaded = true;
+            loadingMsg.style.display = 'none';
+            generateBtn.disabled = false;
+            if (employeeNamesList.length > 0) batchDownloadBtn.disabled = false;
+            setupCanvas();
+            controlsPanel.style.display = 'block';
+            applyAutoLayoutSystem();
+        };
 
-        const controlsPanel = document.getElementById('controlsPanel');
-        const fontSizeSlider = document.getElementById('fontSize');
-        const posYSlider = document.getElementById('posY');
-        const posXSlider = document.getElementById('posX');
+        bgImage.onerror = (err) => {
+            console.error("Critical error loading template:", bgImage.src, err);
+            loadingMsg.textContent = 'حدث خطأ أثناء تحميل صورة التهنئة: ' + bgImage.src;
+            loadingMsg.style.color = '#e74c3c';
+        };
 
-        // Excel & Batch download elements
-        const excelInput = document.getElementById('excelInput');
-        const batchDownloadBtn = document.getElementById('batchDownloadBtn');
-        const batchProgress = document.getElementById('batchProgress');
-        const progressCount = document.getElementById('progressCount');
-        const totalCount = document.getElementById('totalCount');
-        
-        const colorInput = document.getElementById('colorInput');
+        function drawCard(nameParam = null) {
+            if (!imageLoaded) return;
+            if (!fontLoaded) {
+                setTimeout(() => drawCard(nameParam), 100);
+                return;
+            }
+            const name = nameParam || nameInput.value.trim();
+            if (!name && !nameParam) return;
 
-        // نستخدم الحجم الأصلي للصورة بدلاً من تكبيرها برمجياً لتجنب التشويش
-        const scaleMultiplier = 1;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
 
-        let bgImage = new Image();
-        let imageLoaded = false;
-        let fontLoaded = false;
-        let employeeNamesList = [];
-        
-        // المتغيرات للصورة الشخصية
-        let userPhotoImg = new Image();
-        let isUserPhotoLoaded = false;
-        
-        const userPhotoInput = document.getElementById('userPhotoInput');
-        const photoSettingsPanel = document.getElementById('photoSettingsPanel');
-        const photoSizeSlider = document.getElementById('photoSize');
-        const photoXSlider = document.getElementById('photoX');
-        const photoYSlider = document.getElementById('photoY');
-        
-        let activeFontFamily = 'SymbioAR+LT-Black';
+            if (isUserPhotoLoaded) {
+                const pSize = photoSizeSlider.value * scaleMultiplier;
+                const pX = canvas.width * (photoXSlider.value / 100);
+                const pY = canvas.height * (photoYSlider.value / 100);
+                ctx.save();
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                ctx.shadowBlur = 15 * scaleMultiplier;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 5 * scaleMultiplier;
+                ctx.beginPath();
+                ctx.arc(pX, pY, pSize, 0, Math.PI * 2, true);
+                ctx.closePath();
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.shadowColor = 'transparent';
+                ctx.clip();
+                const aspectRatio = userPhotoImg.width / userPhotoImg.height;
+                let drawWidth, drawHeight;
+                if (aspectRatio > 1) {
+                    drawHeight = pSize * 2;
+                    drawWidth = drawHeight * aspectRatio;
+                } else {
+                    drawWidth = pSize * 2;
+                    drawHeight = drawWidth / aspectRatio;
+                }
+                ctx.drawImage(userPhotoImg, pX - drawWidth/2, pY - drawHeight/2, drawWidth, drawHeight);
+                ctx.restore();
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(pX, pY, pSize, 0, Math.PI * 2, true);
+                ctx.lineWidth = 4 * scaleMultiplier;
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+                ctx.restore();
+            }
 
-        // تحميل الخط للتأكد أنه متاح للكانفاس
+            const fontSize = fontSizeSlider.value * scaleMultiplier;
+            ctx.font = `bold ${fontSize}px '${activeFontFamily}', 'Tajawal', Arial, sans-serif`;
+            ctx.fillStyle = colorInput.value;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 10 * scaleMultiplier;
+            ctx.shadowOffsetX = 2 * scaleMultiplier;
+            ctx.shadowOffsetY = 2 * scaleMultiplier;
+            const x = canvas.width * (posXSlider.value / 100);
+            const y = (canvas.height * (posYSlider.value / 100));
+            ctx.fillText(name, x, y);
+
+            if (!nameParam) {
+                previewContainer.style.display = 'block';
+                downloadBtn.style.display = 'block';
+                const currentDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                if (name && name !== lastSavedName) {
+                    window.saveVisitorDataToFirebase(name, currentDataUrl);
+                    lastSavedName = name;
+                }
+            }
+        }
+
+        // --- Event Listeners ---
         const customFont = new FontFace('SymbioAR+LT-Black', 'url(assets/SymbioAR+LT-Black.otf)');
         customFont.load().then(function (loadedFace) {
             document.fonts.add(loadedFace);
             fontLoaded = true;
-            if (imageLoaded && nameInput.value.trim()) {
-                drawCard();
-            }
+            if (imageLoaded && nameInput.value.trim()) drawCard();
         }).catch(function (error) {
             console.error('خطأ في تحميل الخط:', error);
             fontLoaded = true;
         });
 
-        // منطق رفع الخطوط المخصصة
         fontInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const fontData = event.target.result;
-                    // تكوين اسم فريد للخط لتجنب التعارض
                     const newFontFamily = 'CustomFont_' + Date.now();
-                    
                     const newCustomFont = new FontFace(newFontFamily, fontData);
                     newCustomFont.load().then(function(loadedFace) {
                         document.fonts.add(loadedFace);
                         activeFontFamily = newFontFamily;
                         currentFontName.textContent = file.name;
                         currentFontName.style.color = '#e67e22';
-                        
-                        // إعادة رسم البطاقة بالخط الجديد
-                        if (nameInput.value.trim()) {
-                            drawCard();
-                        }
-                    }).catch(function(error) {
-                        alert('حدث خطأ أثناء تحميل الخط. تأكد من أنه بصيغة صحيحة (TTF/OTF).');
-                        console.error('Font load error:', error);
+                        if (nameInput.value.trim()) drawCard();
+                    }).catch(err => {
+                        alert('حدث خطأ أثناء تحميل الخط.');
+                        console.error(err);
                     });
                 };
                 reader.readAsArrayBuffer(file);
@@ -758,7 +829,6 @@
         });
 
         autoLayoutBtn.addEventListener('click', applyAutoLayoutSystem);
-
         templateThumbs.forEach(thumb => {
             thumb.addEventListener('click', function() {
                 templateThumbs.forEach(t => t.classList.remove('active'));
@@ -779,10 +849,6 @@
             }
         });
 
-        // تحميل الصورة الافتراضية الأولى
-        loadTemplate('assets/greeting.png');
-
-        // منطق الصورة الشخصية
         userPhotoInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
@@ -792,165 +858,22 @@
                     userPhotoImg.onload = function() {
                         isUserPhotoLoaded = true;
                         photoSettingsPanel.style.display = 'block';
-                        
-                        // تطبيق التنسيق التلقائي فوراً عند رفع الصورة ليتناسب مع وجودها
                         applyAutoLayoutSystem();
-                        
-                        // نرسم البطاقة فوراً (حتى لو لم يكتب اسمه، لتظهر الصورة)
-                        if (nameInput.value.trim() || previewContainer.style.display === 'block') {
-                            drawCard(nameInput.value.trim() || ' ');
-                        } else {
-                            drawCard(' ');
-                        }
+                        drawCard(nameInput.value.trim() || ' ');
                     };
                 };
                 reader.readAsDataURL(file);
             }
         });
+
         bgImage.onload = () => {
             imageLoaded = true;
             loadingMsg.style.display = 'none';
             generateBtn.disabled = false;
-
-            // Allow batch if excel was loaded before image
-            if (employeeNamesList.length > 0) {
-                batchDownloadBtn.disabled = false;
-            }
-
+            if (employeeNamesList.length > 0) batchDownloadBtn.disabled = false;
             setupCanvas();
-            controlsPanel.style.display = 'block'; // Show settings always to be able to set them early
+            controlsPanel.style.display = 'block';
         };
-        bgImage.onerror = () => {
-            loadingMsg.textContent = 'حدث خطأ أثناء تحميل صورة التهنئة. تأكد من وجود الصورة.';
-            loadingMsg.style.color = '#e74c3c';
-        };
-
-        function setupCanvas() {
-            // نجعل الحجم الداخلي للكانفاس ضخم جداً للحفاظ على الدقة
-            canvas.width = bgImage.width * scaleMultiplier;
-            canvas.height = bgImage.height * scaleMultiplier;
-
-            // لكن نعرضه للمستخدم بحجم منطقي (مع ضبط الـ CSS للحد الأقصى للارتفاع)
-            canvas.style.width = bgImage.width + 'px';
-
-            // نقوم بتهيئة الصورة
-            ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
-        }
-
-        // --- Firebase Integration Helper ---
-        let lastSavedName = '';
-        function trySaveToFirebase(name, dataUrl) {
-            if (name && name !== lastSavedName && window.saveVisitorDataToFirebase) {
-                window.saveVisitorDataToFirebase(name, dataUrl);
-                lastSavedName = name;
-            }
-        }
-
-        // --- Single Image Logic --- //
-        function drawCard(nameParam = null) {
-            if (!imageLoaded) return;
-            // ننتظر تحميل الخط المخصص لتجنب استخدام الخط الافتراضي بالخطأ
-            if (!fontLoaded) {
-                setTimeout(() => drawCard(nameParam), 100);
-                return;
-            }
-
-            const name = nameParam || nameInput.value.trim();
-            if (!name && !nameParam) return;
-
-            // رسم الصورة الخلفية بملء مساحة الكانفاس المضروبة
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(bgImage, 0, 0, canvas.width, canvas.height);
-
-            // رسم الصورة الشخصية إن وجدت
-            if (isUserPhotoLoaded) {
-                const pSize = photoSizeSlider.value * scaleMultiplier;
-                // حساب الموقع (القيم نسبة مئوية)
-                const pX = canvas.width * (photoXSlider.value / 100);
-                const pY = canvas.height * (photoYSlider.value / 100);
-                
-                ctx.save();
-                
-                // إضافة ظل للصورة الشخصية
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-                ctx.shadowBlur = 15 * scaleMultiplier;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 5 * scaleMultiplier;
-
-                // رسم المسار الدائري
-                ctx.beginPath();
-                ctx.arc(pX, pY, pSize, 0, Math.PI * 2, true);
-                ctx.closePath();
-                
-                // لون الخلفية والإطار تحت الظل
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-
-                // إزالة الظل من المعالجات التالية
-                ctx.shadowColor = 'transparent';
-                
-                // اقتصاص الكانفاس بداخل الدائرة
-                ctx.clip();
-                
-                // حساب اقتصاص الصورة لملء الدائرة تماماً (Object Cover)
-                const aspectRatio = userPhotoImg.width / userPhotoImg.height;
-                let drawWidth, drawHeight;
-                if (aspectRatio > 1) { // صورة عرضية
-                    drawHeight = pSize * 2;
-                    drawWidth = drawHeight * aspectRatio;
-                } else { // صورة طولية أو مربعة
-                    drawWidth = pSize * 2;
-                    drawHeight = drawWidth / aspectRatio;
-                }
-                
-                // رسم الصورة مقصوصة ومركزة
-                ctx.drawImage(userPhotoImg, pX - drawWidth/2, pY - drawHeight/2, drawWidth, drawHeight);
-                ctx.restore();
-                
-                // رسم إطار حول الصورة الشخصية
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(pX, pY, pSize, 0, Math.PI * 2, true);
-                ctx.lineWidth = 4 * scaleMultiplier;
-                ctx.strokeStyle = '#ffffff';
-                ctx.stroke();
-                ctx.restore();
-            }
-
-            // إعدادات النص (يجب ضرب حجم الخط في المعامل)
-            const fontSize = fontSizeSlider.value * scaleMultiplier;
-            ctx.font = `bold ${fontSize}px '${activeFontFamily}', 'Tajawal', Arial, sans-serif`;
-            ctx.fillStyle = colorInput.value; // استخدام اللون المُختار من المستخدم
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-
-            // تحسين جودة رسم النص للكانفاس
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-
-            // إضافة ظل بسيط للنص ليكون أوضح (نضرب القيم لكي تتناسب مع الحجم الجديد)
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-            ctx.shadowBlur = 10 * scaleMultiplier;
-            ctx.shadowOffsetX = 2 * scaleMultiplier;
-            ctx.shadowOffsetY = 2 * scaleMultiplier;
-
-            // حساب الموقع 
-            const x = canvas.width * (posXSlider.value / 100);
-            const y = (canvas.height * (posYSlider.value / 100));
-
-            // رسم النص
-            ctx.fillText(name, x, y);
-
-            // إظهار النتائج للبطاقة المنفردة
-            if (!nameParam) {
-                previewContainer.style.display = 'block';
-                downloadBtn.style.display = 'block';
-                
-                // حفظ البيانات في فايربيس في الخلفية
-                const currentDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                trySaveToFirebase(name, currentDataUrl);
-            }
-        }
 
         generateBtn.addEventListener('click', () => {
             if (!nameInput.value.trim()) {
@@ -960,42 +883,17 @@
             drawCard();
         });
 
-        // تحديث المباشر عند تغيير الإعدادات
-        fontSizeSlider.addEventListener('input', () => {
-            if (nameInput.value.trim()) drawCard();
-        });
-        posYSlider.addEventListener('input', () => {
-            if (nameInput.value.trim()) drawCard();
-        });
-        posXSlider.addEventListener('input', () => {
-            if (nameInput.value.trim()) drawCard();
-        });
-        colorInput.addEventListener('input', () => {
-            if (nameInput.value.trim() && previewContainer.style.display === 'block') drawCard();
-        });
-        
-        // تحديث المباشر لصورة الموظف
-        photoSizeSlider.addEventListener('input', () => {
-            if (isUserPhotoLoaded && previewContainer.style.display === 'block') drawCard(nameInput.value.trim() || ' ');
-        });
-        photoXSlider.addEventListener('input', () => {
-            if (isUserPhotoLoaded && previewContainer.style.display === 'block') drawCard(nameInput.value.trim() || ' ');
-        });
-        photoYSlider.addEventListener('input', () => {
-            if (isUserPhotoLoaded && previewContainer.style.display === 'block') drawCard(nameInput.value.trim() || ' ');
-        });
-        nameInput.addEventListener('input', function () {
-            if (previewContainer.style.display === 'block' && imageLoaded) {
-                drawCard();
-            }
-        });
-        nameInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter' && imageLoaded) {
-                if (nameInput.value.trim()) drawCard();
-            }
-        });
+        fontSizeSlider.addEventListener('input', () => { if (nameInput.value.trim()) drawCard(); });
+        posYSlider.addEventListener('input', () => { if (nameInput.value.trim()) drawCard(); });
+        posXSlider.addEventListener('input', () => { if (nameInput.value.trim()) drawCard(); });
+        colorInput.addEventListener('input', () => { if (nameInput.value.trim() && previewContainer.style.display === 'block') drawCard(); });
+        photoSizeSlider.addEventListener('input', () => { if (isUserPhotoLoaded && previewContainer.style.display === 'block') drawCard(nameInput.value.trim() || ' '); });
+        photoXSlider.addEventListener('input', () => { if (isUserPhotoLoaded && previewContainer.style.display === 'block') drawCard(nameInput.value.trim() || ' '); });
+        photoYSlider.addEventListener('input', () => { if (isUserPhotoLoaded && previewContainer.style.display === 'block') drawCard(nameInput.value.trim() || ' '); });
+        nameInput.addEventListener('input', () => { if (previewContainer.style.display === 'block' && imageLoaded) drawCard(); });
+        nameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && imageLoaded && nameInput.value.trim()) drawCard(); });
 
-        downloadBtn.addEventListener('click', function () {
+        downloadBtn.addEventListener('click', () => {
             const link = document.createElement('a');
             const sanitizedName = nameInput.value.trim().replace(/\s+/g, '-');
             link.download = `معايدة-${sanitizedName || 'التهنئة'}.jpg`;
@@ -1003,7 +901,37 @@
             link.click();
         });
 
-        // --- Batch Logic (Excel) --- //
+        saveLayoutBtn.addEventListener('click', async () => {
+            const currentSrc = bgImage.getAttribute('src');
+            if (!currentSrc) return;
+            const config = {
+                fontSize: parseInt(fontSizeSlider.value),
+                posY: parseInt(posYSlider.value),
+                posX: parseInt(posXSlider.value),
+                photoSize: parseInt(photoSizeSlider.value),
+                photoX: parseInt(photoXSlider.value),
+                photoY: parseInt(photoYSlider.value),
+                color: colorInput.value
+            };
+            const originalText = saveLayoutBtn.innerHTML;
+            saveLayoutBtn.innerHTML = '⌛ جاري الحفظ...';
+            saveLayoutBtn.disabled = true;
+            const success = await saveTemplateConfigToFirebase(currentSrc, config);
+            if (success) {
+                autoLayouts[currentSrc] = config;
+                saveLayoutBtn.innerHTML = '✅ تم الحفظ كافتراضي!';
+                saveLayoutBtn.style.backgroundColor = '#27ae60';
+            } else {
+                saveLayoutBtn.innerHTML = '❌ فشل الحفظ';
+                saveLayoutBtn.style.backgroundColor = '#e74c3c';
+            }
+            setTimeout(() => {
+                saveLayoutBtn.innerHTML = originalText;
+                saveLayoutBtn.style.backgroundColor = '#e67e22';
+                saveLayoutBtn.disabled = false;
+            }, 2000);
+        });
+
         excelInput.addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (file) {
@@ -1012,89 +940,49 @@
                     try {
                         const data = evt.target.result;
                         const workbook = XLSX.read(data, { type: 'binary' });
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                         const jsonStr = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-                        employeeNamesList = [];
-                        for (let i = 0; i < jsonStr.length; i++) {
-                            const row = jsonStr[i];
-                            if (row && row.length > 0 && typeof row[0] === 'string' && row[0].trim() !== '') {
-                                employeeNamesList.push(row[0].trim());
-                            }
-                        }
-
+                        employeeNamesList = jsonStr.map(row => (row && row[0]) ? row[0].toString().trim() : null).filter(n => n);
                         if (employeeNamesList.length > 0) {
                             batchDownloadBtn.style.display = 'block';
                             batchDownloadBtn.innerHTML = `تنزيل عدد (${employeeNamesList.length}) بطاقة ZIP`;
-                            if (imageLoaded) {
-                                batchDownloadBtn.disabled = false;
-                            }
-                            alert(`تم قراءة ${employeeNamesList.length} اسم بنجاح. يمكنك الآن تعديل إعدادات الخط قبل النقر على تحميل الكل.`);
-                        } else {
-                            batchDownloadBtn.style.display = 'none';
-                            alert('لم يتم العثور على أسماء في الملف. يرجى التأكد من أن الأسماء في العمود الأول.');
+                            if (imageLoaded) batchDownloadBtn.disabled = false;
+                            alert(`تم قراءة ${employeeNamesList.length} اسم بنجاح.`);
                         }
-                    } catch (err) {
-                        alert('حدث خطأ أثناء قراءة ملف Excel.');
-                        console.error(err);
-                    }
+                    } catch (err) { alert('حدث خطأ أثناء قراءة ملف Excel.'); console.error(err); }
                 };
                 reader.readAsBinaryString(file);
             }
         });
 
-        batchDownloadBtn.addEventListener('click', async function () {
+        batchDownloadBtn.addEventListener('click', async () => {
             if (!imageLoaded || employeeNamesList.length === 0) return;
-
-            // تعطيل الأزرار أثناء التحميل
             batchDownloadBtn.disabled = true;
             generateBtn.disabled = true;
-
             batchProgress.style.display = 'block';
             totalCount.textContent = employeeNamesList.length;
-
             const zip = new JSZip();
             const folder = zip.folder("معايدات_الموظفين");
-
             for (let i = 0; i < employeeNamesList.length; i++) {
                 const name = employeeNamesList[i];
-
-                // رسم البطاقة بالاسم الحالي
                 drawCard(name);
-
-                // تحويل الكانفاس لصورة بأعلى جودة
                 const dataURL = canvas.toDataURL('image/jpeg', 1.0);
-                const base64Data = dataURL.replace(/^data:image\/(png|jpeg);base64,/, "");
-
-                const safeName = name.replace(/\s+/g, '-');
-                folder.file(`معايدة-${safeName}.jpg`, base64Data, { base64: true });
-
+                folder.file(`معايدة-${name.replace(/\s+/g, '-')}.jpg`, dataURL.split(',')[1], { base64: true });
                 progressCount.textContent = i + 1;
-
-                // السماح للمتصفح بتحديث الواجهة (تأخير خفيف جداً)
-                await new Promise(resolve => setTimeout(resolve, 30));
+                await new Promise(r => setTimeout(r, 30));
             }
-
-            batchProgress.innerHTML = 'جاري ضغط الملفات وتحضير ملف ZIP...';
-
-            zip.generateAsync({ type: "blob" }).then(function (content) {
-                saveAs(content, "معايدات_الموظفين.zip");
-                batchProgress.style.display = 'none';
-                batchProgress.innerHTML = 'جاري تجهيز الصور... <span id="progressCount">0</span>/<span id="totalCount">0</span>';
-
-                // إعادة تمكين الأزرار
-                batchDownloadBtn.disabled = false;
-                generateBtn.disabled = false;
-
-                // إعادة عرض البطاقة الأخيرة أو تفريغ الكانفاس
-                if (nameInput.value.trim()) {
-                    drawCard();
-                } else {
-                    setupCanvas();
-                }
-            });
+            batchProgress.innerHTML = 'جاري ضغط الملفات...';
+            const content = await zip.generateAsync({ type: "blob" });
+            saveAs(content, "معايدات_الموظفين.zip");
+            batchProgress.style.display = 'none';
+            batchDownloadBtn.disabled = false;
+            generateBtn.disabled = false;
+            if (nameInput.value.trim()) drawCard(); else setupCanvas();
         });
+
+        // --- Initialization ---
+        initTemplateConfigs();
+        loadTemplate('assets/greeting.png');
     </script>
 </body>
 
