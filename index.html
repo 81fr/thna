@@ -692,8 +692,8 @@
         async function initTemplateConfigs() {
             const remoteConfigs = await loadTemplateConfigsFromFirebase();
             Object.keys(remoteConfigs).forEach(id => {
-                // تذكير: لا تقم بتجاوز القالب الأول إذا كان مخزناً بقيم قديمة
-                if (id === 'assets/greeting.png') return;
+                // تذكير: لا تقم بتجاوز القالب الأول والثاني إذا كان مخزناً بقيم قديمة
+                if (id === 'assets/greeting.png' || id === 'assets/greeting2.png') return;
                 autoLayouts[id] = remoteConfigs[id];
             });
             if (imageLoaded) applyAutoLayoutSystem();
