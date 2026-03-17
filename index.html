@@ -451,15 +451,15 @@
                 <div class="photo-settings" id="photoSettingsPanel" style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
                     <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: var(--primary);">إعدادات الصورة الشخصية:</p>
                     <div class="control-group">
-                        <label>حجم الصورة</label>
+                        <label>حجم الصورة <span id="photoSizeVal" style="color:var(--accent);">100</span></label>
                         <input type="range" id="photoSize" min="10" max="400" value="100">
                     </div>
                     <div class="control-group">
-                        <label>الموقع الأفقي</label>
+                        <label>الموقع الأفقي <span id="photoXVal" style="color:var(--accent);">50</span></label>
                         <input type="range" id="photoX" min="0" max="100" value="50">
                     </div>
                     <div class="control-group">
-                        <label>الموقع العمودي</label>
+                        <label>الموقع العمودي <span id="photoYVal" style="color:var(--accent);">35</span></label>
                         <input type="range" id="photoY" min="0" max="100" value="35">
                     </div>
                 </div>
@@ -607,6 +607,9 @@
         const photoSizeSlider = document.getElementById('photoSize');
         const photoXSlider = document.getElementById('photoX');
         const photoYSlider = document.getElementById('photoY');
+        const photoSizeVal = document.getElementById('photoSizeVal');
+        const photoXVal = document.getElementById('photoXVal');
+        const photoYVal = document.getElementById('photoYVal');
         const templateThumbs = document.querySelectorAll('.template-thumb');
         const customTemplateInput = document.getElementById('customTemplateInput');
         const autoLayoutBtn = document.getElementById('autoLayoutBtn');
@@ -661,6 +664,9 @@
             fontSizeVal.textContent = fontSizeSlider.value;
             posYVal.textContent = posYSlider.value;
             posXVal.textContent = posXSlider.value;
+            if (photoSizeVal) photoSizeVal.textContent = photoSizeSlider.value;
+            if (photoXVal) photoXVal.textContent = photoXSlider.value;
+            if (photoYVal) photoYVal.textContent = photoYSlider.value;
         }
 
         function getCanvasCoords(e) {
@@ -1039,15 +1045,6 @@
             }
         });
 
-        bgImage.onload = () => {
-            imageLoaded = true;
-            loadingMsg.style.display = 'none';
-            generateBtn.disabled = false;
-            if (employeeNamesList.length > 0) batchDownloadBtn.disabled = false;
-            setupCanvas();
-            controlsPanel.style.display = 'block';
-        };
-
         generateBtn.addEventListener('click', () => {
             if (!nameInput.value.trim()) {
                 alert('الرجاء إدخال اسم لمعاينة البطاقة');
@@ -1139,7 +1136,6 @@
                     const ds = (coords.x - dragState.startX) / scaleMultiplier;
                     fontSizeSlider.value = Math.max(20, Math.min(150, dragState.startSize + ds));
                 }
-                updateSliderLabels();
             } else if (dragState.target === 'photo') {
                 if (dragState.mode === 'drag') {
                     const dx = ((coords.x - dragState.startX) / canvas.width) * 100;
@@ -1151,7 +1147,7 @@
                     photoSizeSlider.value = Math.max(10, Math.min(400, dragState.startSize + ds));
                 }
             }
-            
+            updateSliderLabels();
             drawCard();
             e.preventDefault();
         }
