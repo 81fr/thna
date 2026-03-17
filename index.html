@@ -628,6 +628,20 @@
         let activeFontFamily = 'SymbioAR+LT-Black';
         let lastSavedName = '';
 
+        // --- Drag & Resize State ---
+        let dragState = {
+            active: false,
+            target: null, // 'text', 'photo'
+            mode: 'drag',  // 'drag', 'resize'
+            startX: 0,
+            startY: 0,
+            startPhotoX: 0,
+            startPhotoY: 0,
+            startTextX: 0,
+            startTextY: 0,
+            startSize: 0
+        };
+
         // --- Auto Layout Configs (calibrated from reference images) ---
         const autoLayouts = {
             'assets/greeting.png':  { fontSize: 58, posY: 58, posX: 50, photoSize: 100, photoX: 50, photoY: 30, color: '#ffffff' },
@@ -647,6 +661,41 @@
             fontSizeVal.textContent = fontSizeSlider.value;
             posYVal.textContent = posYSlider.value;
             posXVal.textContent = posXSlider.value;
+        }
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: (clientX - rect.left) * (canvas.width / rect.width),
+                y: (clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        function isPointInCircle(px, py, cx, cy, radius) {
+            const dx = px - cx;
+            const dy = py - cy;
+            return Math.sqrt(dx * dx + dy * dy) <= radius;
+        }
+
+        function getTextMetrics() {
+            const name = nameInput.value.trim() || ' ';
+            const fontSize = fontSizeSlider.value * scaleMultiplier;
+            ctx.font = `bold ${fontSize}px '${activeFontFamily}', 'Tajawal', Arial, sans-serif`;
+            const metrics = ctx.measureText(name);
+            const x = canvas.width * (posXSlider.value / 100);
+            const y = canvas.height * (posYSlider.value / 100);
+            const height = fontSize; // Approximate
+            const width = metrics.width;
+            return {
+                x: x - width / 2,
+                y: y - height / 2,
+                w: width,
+                h: height,
+                centerX: x,
+                centerY: y
+            };
         }
 
         function setupCanvas() {
@@ -870,6 +919,43 @@
             const y = (canvas.height * (posYSlider.value / 100));
             ctx.fillText(name, x, y);
 
+            // --- Visual Feedback for Interaction ---
+            if (dragState.active || nameParam === null) {
+                // Photo Highlight
+                if (isUserPhotoLoaded) {
+                    const pSize = photoSizeSlider.value * scaleMultiplier;
+                    const pX = canvas.width * (photoXSlider.value / 100);
+                    const pY = canvas.height * (photoYSlider.value / 100);
+                    ctx.save();
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeStyle = dragState.target === 'photo' ? 'var(--primary)' : 'rgba(0,0,0,0.2)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(pX, pY, pSize + 5, 0, Math.PI * 2);
+                    ctx.stroke();
+                    // Resize Handle for Photo
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = 'var(--primary)';
+                    ctx.beginPath();
+                    ctx.arc(pX + pSize, pY, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // Text Highlight
+                const tm = getTextMetrics();
+                ctx.save();
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = dragState.target === 'text' ? 'var(--primary)' : 'rgba(0,0,0,0.2)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(tm.x - 10, tm.y - 10, tm.w + 20, tm.h + 20);
+                // Resize Handle for Text
+                ctx.setLineDash([]);
+                ctx.fillStyle = 'var(--primary)';
+                ctx.fillRect(tm.x + tm.w + 5, tm.y + tm.h / 2 - 5, 10, 10);
+                ctx.restore();
+            }
+
             if (!nameParam) {
                 previewContainer.style.display = 'block';
                 downloadBtn.style.display = 'block';
@@ -987,6 +1073,95 @@
             link.href = canvas.toDataURL('image/jpeg', 1.0);
             link.click();
         });
+
+        // --- Direct Canvas Manipulation Handlers ---
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('touchmove', handlePointerMove, { passive: false });
+        window.addEventListener('mouseup', handlePointerUp);
+        window.addEventListener('touchend', handlePointerUp);
+
+        function handlePointerDown(e) {
+            if (!imageLoaded) return;
+            const coords = getCanvasCoords(e);
+            const tm = getTextMetrics();
+            
+            // Check Text Resize Handle
+            if (coords.x >= tm.x + tm.w + 5 && coords.x <= tm.x + tm.w + 15 && 
+                coords.y >= tm.y + tm.h/2 - 5 && coords.y <= tm.y + tm.h/2 + 5) {
+                dragState = { active: true, target: 'text', mode: 'resize', startX: coords.x, startSize: parseInt(fontSizeSlider.value) };
+                e.preventDefault();
+                return;
+            }
+
+            // Check Text Drag
+            if (coords.x >= tm.x - 10 && coords.x <= tm.x + tm.w + 10 && 
+                coords.y >= tm.y - 10 && coords.y <= tm.y + tm.h + 10) {
+                dragState = { active: true, target: 'text', mode: 'drag', startX: coords.x, startY: coords.y, startTextX: parseInt(posXSlider.value), startTextY: parseInt(posYSlider.value) };
+                e.preventDefault();
+                return;
+            }
+
+            if (isUserPhotoLoaded) {
+                const pSize = photoSizeSlider.value * scaleMultiplier;
+                const pX = canvas.width * (photoXSlider.value / 100);
+                const pY = canvas.height * (photoYSlider.value / 100);
+
+                // Check Photo Resize Handle
+                const distToResize = Math.sqrt(Math.pow(coords.x - (pX + pSize), 2) + Math.pow(coords.y - pY, 2));
+                if (distToResize < 15) {
+                    dragState = { active: true, target: 'photo', mode: 'resize', startX: coords.x, startSize: parseInt(photoSizeSlider.value) };
+                    e.preventDefault();
+                    return;
+                }
+
+                // Check Photo Drag
+                if (isPointInCircle(coords.x, coords.y, pX, pY, pSize)) {
+                    dragState = { active: true, target: 'photo', mode: 'drag', startX: coords.x, startY: coords.y, startPhotoX: parseInt(photoXSlider.value), startPhotoY: parseInt(photoYSlider.value) };
+                    e.preventDefault();
+                    return;
+                }
+            }
+        }
+
+        function handlePointerMove(e) {
+            if (!dragState.active) return;
+            const coords = getCanvasCoords(e);
+            
+            if (dragState.target === 'text') {
+                if (dragState.mode === 'drag') {
+                    const dx = ((coords.x - dragState.startX) / canvas.width) * 100;
+                    const dy = ((coords.y - dragState.startY) / canvas.height) * 100;
+                    posXSlider.value = Math.max(0, Math.min(100, dragState.startTextX + dx));
+                    posYSlider.value = Math.max(0, Math.min(100, dragState.startTextY + dy));
+                } else {
+                    const ds = (coords.x - dragState.startX) / scaleMultiplier;
+                    fontSizeSlider.value = Math.max(20, Math.min(150, dragState.startSize + ds));
+                }
+                updateSliderLabels();
+            } else if (dragState.target === 'photo') {
+                if (dragState.mode === 'drag') {
+                    const dx = ((coords.x - dragState.startX) / canvas.width) * 100;
+                    const dy = ((coords.y - dragState.startY) / canvas.height) * 100;
+                    photoXSlider.value = Math.max(0, Math.min(100, dragState.startPhotoX + dx));
+                    photoYSlider.value = Math.max(0, Math.min(100, dragState.startPhotoY + dy));
+                } else {
+                    const ds = (coords.x - dragState.startX) / scaleMultiplier;
+                    photoSizeSlider.value = Math.max(10, Math.min(400, dragState.startSize + ds));
+                }
+            }
+            
+            drawCard();
+            e.preventDefault();
+        }
+
+        function handlePointerUp() {
+            if (dragState.active) {
+                dragState.active = false;
+                drawCard();
+            }
+        }
 
         saveLayoutBtn.addEventListener('click', async () => {
             const currentSrc = bgImage.getAttribute('src');
