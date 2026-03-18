@@ -102,6 +102,7 @@
             font-weight: 700;
             background: linear-gradient(to left, #2c3e50, #3498db);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -269,6 +270,7 @@
 
         input[type="range"] {
             -webkit-appearance: none;
+            appearance: none;
             width: 100%;
             height: 6px;
             background: #e2e8f0;
@@ -382,7 +384,7 @@
         }
 
         /* Responsive Layout */
-        @media (max-width: 1000px) {
+        @media (max-width: 850px) {
             .app-wrapper {
                 flex-direction: column;
                 align-items: center;
@@ -668,9 +670,9 @@
 
         // --- Core Functions ---
         function updateSliderLabels() {
-            fontSizeVal.textContent = fontSizeSlider.value;
-            posYVal.textContent = posYSlider.value;
-            posXVal.textContent = posXSlider.value;
+            if (fontSizeVal) fontSizeVal.textContent = fontSizeSlider.value;
+            if (posYVal) posYVal.textContent = posYSlider.value;
+            if (posXVal) posXVal.textContent = posXSlider.value;
             if (photoSizeVal) photoSizeVal.textContent = photoSizeSlider.value;
             if (photoXVal) photoXVal.textContent = photoXSlider.value;
             if (photoYVal) photoYVal.textContent = photoYSlider.value;
@@ -836,20 +838,22 @@
             if (imageLoaded) applyAutoLayoutSystem();
         }
 
-        function loadTemplate(src) {
+        function loadTemplate(src, forceAutoLayout = false) {
             loadingMsg.style.display = 'block';
             loadingMsg.textContent = 'جاري تحميل صورة التهنئة...';
             generateBtn.disabled = true;
             batchDownloadBtn.disabled = true;
             imageLoaded = false;
             
-            bgImage.setAttribute('src', src);
-            bgImage.crossOrigin = "anonymous";
             bgImage.src = src;
+            bgImage.crossOrigin = "anonymous";
             
-            setTimeout(() => {
-                if (!imageLoaded) applyAutoLayoutSystem();
-            }, 500);
+            // Only auto-layout if forced or if it's the first load
+            if (forceAutoLayout) {
+                setTimeout(() => {
+                    if (imageLoaded) applyAutoLayoutSystem();
+                }, 100);
+            }
         }
 
         // --- bgImage Handlers ---
@@ -860,7 +864,7 @@
             if (employeeNamesList.length > 0) batchDownloadBtn.disabled = false;
             setupCanvas();
             controlsPanel.style.display = 'block';
-            applyAutoLayoutSystem();
+            // We NO LONGER call applyAutoLayoutSystem here to prevent resetting manual changes
         };
 
         bgImage.onerror = (err) => {
@@ -948,6 +952,10 @@
                     ctx.stroke();
                     // Resize Handle for Photo
                     ctx.setLineDash([]);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(pX + pSize, pY, 12, 0, Math.PI * 2);
+                    ctx.fill();
                     ctx.fillStyle = 'var(--primary)';
                     ctx.beginPath();
                     ctx.arc(pX + pSize, pY, 8, 0, Math.PI * 2);
@@ -965,8 +973,10 @@
                     ctx.strokeRect(tm.x - 10, tm.y - 10, tm.w + 20, tm.h + 20);
                     // Resize Handle for Text
                     ctx.setLineDash([]);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(tm.x + tm.w + 5, tm.y + tm.h / 2 - 8, 16, 16);
                     ctx.fillStyle = 'var(--primary)';
-                    ctx.fillRect(tm.x + tm.w + 5, tm.y + tm.h / 2 - 5, 10, 10);
+                    ctx.fillRect(tm.x + tm.w + 7, tm.y + tm.h / 2 - 6, 12, 12);
                     ctx.restore();
                 }
             }
@@ -1021,7 +1031,8 @@
             thumb.addEventListener('click', function() {
                 templateThumbs.forEach(t => t.classList.remove('active'));
                 this.classList.add('active');
-                loadTemplate(this.getAttribute('data-src'));
+                // Don't force auto-layout when switching normally, keep current settings
+                loadTemplate(this.getAttribute('data-src'), false);
             });
         });
 
@@ -1031,7 +1042,7 @@
                 templateThumbs.forEach(t => t.classList.remove('active'));
                 const reader = new FileReader();
                 reader.onload = function(event) {
-                    loadTemplate(event.target.result);
+                    loadTemplate(event.target.result, true); // Force auto-layout for custom templates
                 };
                 reader.readAsDataURL(file);
             }
@@ -1093,9 +1104,9 @@
             const coords = getCanvasCoords(e);
             const tm = getTextMetrics();
             
-            // Check Text Resize Handle
-            if (coords.x >= tm.x + tm.w + 5 && coords.x <= tm.x + tm.w + 15 && 
-                coords.y >= tm.y + tm.h/2 - 5 && coords.y <= tm.y + tm.h/2 + 5) {
+            // Check Text Resize Handle (Larger hit area)
+            if (coords.x >= tm.x + tm.w + 0 && coords.x <= tm.x + tm.w + 30 && 
+                coords.y >= tm.y + tm.h/2 - 15 && coords.y <= tm.y + tm.h/2 + 15) {
                 dragState = { active: true, target: 'text', mode: 'resize', startX: coords.x, startSize: parseInt(fontSizeSlider.value) };
                 e.preventDefault();
                 return;
@@ -1114,9 +1125,9 @@
                 const pX = canvas.width * (photoXSlider.value / 100);
                 const pY = canvas.height * (photoYSlider.value / 100);
 
-                // Check Photo Resize Handle
+                // Check Photo Resize Handle (Larger hit area)
                 const distToResize = Math.sqrt(Math.pow(coords.x - (pX + pSize), 2) + Math.pow(coords.y - pY, 2));
-                if (distToResize < 15) {
+                if (distToResize < 25) {
                     dragState = { active: true, target: 'photo', mode: 'resize', startX: coords.x, startSize: parseInt(photoSizeSlider.value) };
                     e.preventDefault();
                     return;
@@ -1214,7 +1225,15 @@
                             batchDownloadBtn.style.display = 'block';
                             batchDownloadBtn.innerHTML = `تنزيل عدد (${employeeNamesList.length}) بطاقة ZIP`;
                             if (imageLoaded) batchDownloadBtn.disabled = false;
-                            alert(`تم قراءة ${employeeNamesList.length} اسم بنجاح.`);
+                            
+                            // Auto-populate first name for preview as requested
+                            nameInput.value = employeeNamesList[0];
+                            if (imageLoaded) {
+                                previewContainer.style.display = 'block';
+                                drawCard();
+                            }
+                            
+                            alert(`تم قراءة ${employeeNamesList.length} اسم بنجاح. تم عرض أول اسم للمعاينة.`);
                         }
                     } catch (err) { alert('حدث خطأ أثناء قراءة ملف Excel.'); console.error(err); }
                 };
@@ -1244,12 +1263,13 @@
             batchProgress.style.display = 'none';
             batchDownloadBtn.disabled = false;
             generateBtn.disabled = false;
+            // Draw one last time with input value or setup canvas
             if (nameInput.value.trim()) drawCard(); else setupCanvas();
         });
 
         // --- Initialization ---
         initTemplateConfigs();
-        loadTemplate('assets/greeting.png');
+        loadTemplate('assets/greeting.png', true); // Force auto-layout on first load
     </script>
 </body>
 
