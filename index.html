@@ -932,16 +932,16 @@
             const y = (canvas.height * (posYSlider.value / 100));
             ctx.fillText(name, x, y);
 
-            // --- Visual Feedback for Interaction ---
-            if (dragState.active || nameParam === null) {
+            // --- Visual Feedback for Interaction (Only during drag/resize) ---
+            if (dragState.active) {
                 // Photo Highlight
-                if (isUserPhotoLoaded) {
+                if (isUserPhotoLoaded && dragState.target === 'photo') {
                     const pSize = photoSizeSlider.value * scaleMultiplier;
                     const pX = canvas.width * (photoXSlider.value / 100);
                     const pY = canvas.height * (photoYSlider.value / 100);
                     ctx.save();
                     ctx.setLineDash([5, 5]);
-                    ctx.strokeStyle = dragState.target === 'photo' ? 'var(--primary)' : 'rgba(0,0,0,0.2)';
+                    ctx.strokeStyle = 'var(--primary)';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.arc(pX, pY, pSize + 5, 0, Math.PI * 2);
@@ -956,17 +956,19 @@
                 }
 
                 // Text Highlight
-                const tm = getTextMetrics();
-                ctx.save();
-                ctx.setLineDash([5, 5]);
-                ctx.strokeStyle = dragState.target === 'text' ? 'var(--primary)' : 'rgba(0,0,0,0.2)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(tm.x - 10, tm.y - 10, tm.w + 20, tm.h + 20);
-                // Resize Handle for Text
-                ctx.setLineDash([]);
-                ctx.fillStyle = 'var(--primary)';
-                ctx.fillRect(tm.x + tm.w + 5, tm.y + tm.h / 2 - 5, 10, 10);
-                ctx.restore();
+                if (dragState.target === 'text') {
+                    const tm = getTextMetrics();
+                    ctx.save();
+                    ctx.setLineDash([5, 5]);
+                    ctx.strokeStyle = 'var(--primary)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(tm.x - 10, tm.y - 10, tm.w + 20, tm.h + 20);
+                    // Resize Handle for Text
+                    ctx.setLineDash([]);
+                    ctx.fillStyle = 'var(--primary)';
+                    ctx.fillRect(tm.x + tm.w + 5, tm.y + tm.h / 2 - 5, 10, 10);
+                    ctx.restore();
+                }
             }
 
             if (!nameParam) {
