@@ -399,6 +399,12 @@
                 width: 100%;
                 order: 1;
             }
+            
+            /* Reorder Sidebar items specifically on mobile */
+            #controlsPanel { order: 1; }
+            .photo-settings-card { order: 2; }
+            .template-selector { order: 3; }
+            .batch-card { order: 4; }
         }
 
         @media (max-width: 500px) {
@@ -458,21 +464,22 @@
                         <label for="userPhotoInput" style="color: #0369a1;">👤 إضافة صورة شخصية (دائرية)</label>
                     </div>
                 </div>
+            </div>
 
-                <div class="photo-settings" id="photoSettingsPanel" style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                    <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: var(--primary);">إعدادات الصورة الشخصية:</p>
-                    <div class="control-group">
-                        <label>حجم الصورة <span id="photoSizeVal" style="color:var(--accent);">100</span></label>
-                        <input type="range" id="photoSize" min="10" max="400" value="100">
-                    </div>
-                    <div class="control-group">
-                        <label>الموقع الأفقي <span id="photoXVal" style="color:var(--accent);">50</span></label>
-                        <input type="range" id="photoX" min="0" max="100" value="50">
-                    </div>
-                    <div class="control-group">
-                        <label>الموقع العمودي <span id="photoYVal" style="color:var(--accent);">35</span></label>
-                        <input type="range" id="photoY" min="0" max="100" value="35">
-                    </div>
+            <!-- Photo Settings Card (Separate) -->
+            <div class="glass-card photo-settings-card" id="photoSettingsPanel" style="display: none;">
+                <p style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: var(--primary);">👤 إعدادات الصورة الشخصية:</p>
+                <div class="control-group">
+                    <label>حجم الصورة <span id="photoSizeVal" style="color:var(--accent);">100</span></label>
+                    <input type="range" id="photoSize" min="10" max="400" value="100">
+                </div>
+                <div class="control-group">
+                    <label>الموقع الأفقي <span id="photoXVal" style="color:var(--accent);">50</span></label>
+                    <input type="range" id="photoX" min="0" max="100" value="50">
+                </div>
+                <div class="control-group">
+                    <label>الموقع العمودي <span id="photoYVal" style="color:var(--accent);">35</span></label>
+                    <input type="range" id="photoY" min="0" max="100" value="35">
                 </div>
             </div>
 
@@ -523,7 +530,7 @@
             </div>
 
             <!-- Batch Processing Card -->
-            <div class="glass-card">
+            <div class="glass-card batch-card">
                 <div class="divider"><span>تحميل جماعي</span></div>
                 <div class="custom-upload" style="border-style: dotted; margin-bottom: 15px;">
                     <input type="file" id="excelInput" accept=".xlsx, .xls" style="display:none">
