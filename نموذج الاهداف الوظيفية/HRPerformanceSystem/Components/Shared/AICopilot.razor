@@ -1,53 +1,78 @@
 @using HRPerformanceSystem.Services
 @inject AIInsightsService AISvc
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <div class="ai-copilot-container @(isOpen ? "open" : "")">
     <!-- Chat Button -->
     <button class="ai-chat-trigger" @onclick="ToggleChat">
-        <div class="trigger-icon" style="display:flex;"><Icon Name="brain" Size="32" Color="white" /></div>
+        <div class="trigger-icon" style="display:flex;">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                <path d="M9 10h.01M15 10h.01" />
+            </svg>
+        </div>
         <div class="trigger-pulse"></div>
+        @if (showNotification)
+        {
+            <div class="notification-dot"></div>
+        }
     </button>
 
     <!-- Chat Window -->
     <div class="ai-chat-window">
         <div class="chat-header">
-            <div style="display:flex; align-items:center; gap:10px;">
-                <div class="header-icon" style="display:flex;"><Icon Name="brain" Size="20" Color="white" /></div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="header-avatar">🧠</div>
                 <div>
                     <div class="header-title">المساعد الذكي (ترؤف)</div>
-                    <div class="header-status">نشط الآن</div>
+                    <div class="header-status"><span class="dot"></span> نشط الآن</div>
                 </div>
             </div>
             <button class="close-chat" @onclick="ToggleChat">✕</button>
         </div>
 
         <div class="chat-messages" id="chat-messages">
-            <div class="message system">
-                مرحباً بك! أنا مساعدك الذكي في نظام ترؤف. كيف يمكنني خدمتك اليوم؟
+            <div class="message ai-msg welcome">
+                <div class="msg-content">
+                    مرحباً بك! أنا مساعدك الذكي في نظام ترؤف. كيف يمكنني خدمتك اليوم؟ 
+                </div>
             </div>
+
             @foreach (var msg in messages)
             {
-                <div class="message @(msg.IsUser ? "user" : "ai")">
-                    @msg.Text
+                <div class="message @(msg.IsUser ? "user-msg" : "ai-msg")">
+                    <div class="msg-content">@msg.Text</div>
+                    <div class="msg-time">@msg.Time.ToString("HH:mm")</div>
                 </div>
             }
+
             @if (isTyping)
             {
-                <div class="message ai typing">
-                    <span>.</span><span>.</span><span>.</span>
+                <div class="message ai-msg typing">
+                    <div class="typing-indicator">
+                        <span></span><span></span><span></span>
+                    </div>
                 </div>
             }
         </div>
 
+        <div class="quick-actions">
+            <button @onclick='() => SendQuickAction("أعطني ملخص الأداء العام")'>📊 ملخص الأداء</button>
+            <button @onclick='() => SendQuickAction("من هم المتميزون؟")'>🏆 المتميزون</button>
+            <button @onclick='() => Nav.NavigateTo("/ai-lab")'>🔮 المختبر الذكي</button>
+        </div>
+
         <div class="chat-input-area">
-            <input type="text" placeholder="اسألني عن أداء الموظفين..." 
-                   @bind="userInput" @onkeyup="HandleKeyUp" />
-            <button class="send-btn" @onclick="SendMessage">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                </svg>
-            </button>
+            <div class="input-wrapper">
+                <input type="text" placeholder="اسألني عن أي شيء..." 
+                       @bind="userInput" @onkeyup="HandleKeyUp" />
+                <button class="send-btn" @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(userInput)">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -59,43 +84,51 @@
         left: 30px;
         z-index: 1000;
         direction: rtl;
+        font-family: 'IBM Plex Sans Arabic', sans-serif;
     }
 
+    /* Trigger Button */
     .ai-chat-trigger {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #8b5cf6, #0ea5e9);
+        width: 65px;
+        height: 65px;
+        border-radius: 22px;
+        background: linear-gradient(135deg, #7c3aed, #2563eb);
         border: none;
         color: white;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+        box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
         position: relative;
-        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
     .ai-chat-trigger:hover {
         transform: scale(1.1) rotate(5deg);
-        box-shadow: 0 15px 35px rgba(139, 92, 246, 0.6);
-    }
-
-    .trigger-icon {
-        font-size: 1.8rem;
-        z-index: 2;
+        box-shadow: 0 15px 35px rgba(37, 99, 235, 0.6);
     }
 
     .trigger-pulse {
         position: absolute;
         width: 100%;
         height: 100%;
-        border-radius: 50%;
+        border-radius: 22px;
         background: inherit;
         opacity: 0.5;
         animation: chat-pulse 2s infinite;
-        z-index: 1;
+        z-index: -1;
+    }
+
+    .notification-dot {
+        position: absolute;
+        top: -2px;
+        right: -2px;
+        width: 14px;
+        height: 14px;
+        background: #ef4444;
+        border: 2px solid white;
+        border-radius: 50%;
     }
 
     @@keyframes chat-pulse {
@@ -103,24 +136,27 @@
         100% { transform: scale(1.5); opacity: 0; }
     }
 
+    /* Chat Window */
     .ai-chat-window {
         position: absolute;
-        bottom: 80px;
+        bottom: 85px;
         left: 0;
-        width: 380px;
-        height: 500px;
-        background: white;
-        border-radius: 24px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        width: 400px;
+        height: 600px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 30px;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.15);
         display: flex;
         flex-direction: column;
         overflow: hidden;
         opacity: 0;
-        transform: translateY(20px) scale(0.9);
+        transform: translateY(30px) scale(0.8);
         pointer-events: none;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
         transform-origin: bottom left;
-        border: 1px solid rgba(0,0,0,0.05);
+        border: 1px solid rgba(255, 255, 255, 0.4);
     }
 
     .ai-copilot-container.open .ai-chat-window {
@@ -129,144 +165,203 @@
         pointer-events: all;
     }
 
+    /* Header */
     .chat-header {
-        padding: 20px;
+        padding: 24px;
         background: linear-gradient(135deg, #0f172a, #1e293b);
         color: white;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        position: relative;
     }
 
-    .header-icon {
-        width: 40px;
-        height: 40px;
+    .header-avatar {
+        width: 45px;
+        height: 45px;
         background: rgba(255,255,255,0.1);
-        border-radius: 12px;
+        border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
+        font-size: 1.5rem;
     }
 
-    .header-title { font-weight: 800; font-size: 0.95rem; }
-    .header-status { font-size: 0.7rem; opacity: 0.7; }
+    .header-title { font-weight: 800; font-size: 1rem; }
+    .header-status { font-size: 0.75rem; opacity: 0.8; display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+    .header-status .dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block; }
 
     .close-chat {
-        background: none;
+        background: rgba(255,255,255,0.1);
         border: none;
         color: white;
-        font-size: 1.2rem;
+        width: 32px;
+        height: 32px;
+        border-radius: 10px;
         cursor: pointer;
-        opacity: 0.6;
-        transition: opacity 0.2s;
+        transition: all 0.2s;
     }
 
-    .close-chat:hover { opacity: 1; }
+    .close-chat:hover { background: rgba(255,255,255,0.2); }
 
+    /* Messages Area */
     .chat-messages {
         flex: 1;
         padding: 20px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 16px;
         background: #f8fafc;
+        scrollbar-width: thin;
     }
 
     .message {
-        max-width: 85%;
-        padding: 12px 16px;
-        border-radius: 18px;
-        font-size: 0.85rem;
-        line-height: 1.5;
+        max-width: 80%;
+        animation: msg-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1) both;
         position: relative;
-        animation: msg-in 0.3s ease-out both;
     }
 
-    @@keyframes msg-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @@keyframes msg-in { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-    .message.system {
-        align-self: center;
-        background: #e2e8f0;
-        color: #475569;
-        text-align: center;
-        font-size: 0.75rem;
-        font-weight: 600;
-        border-radius: 12px;
+    .msg-content {
+        padding: 12px 18px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        font-weight: 500;
     }
 
-    .message.user {
-        align-self: flex-start;
-        background: #0ea5e9;
+    .msg-time { font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; padding: 0 8px; }
+
+    .user-msg { align-self: flex-start; }
+    .user-msg .msg-content {
+        background: #2563eb;
         color: white;
         border-bottom-right-radius: 4px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
+    .user-msg .msg-time { text-align: left; }
 
-    .message.ai {
-        align-self: flex-end;
+    .ai-msg { align-self: flex-end; }
+    .ai-msg .msg-content {
         background: white;
         color: #1e293b;
         border-bottom-left-radius: 4px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         border: 1px solid rgba(0,0,0,0.05);
     }
-
-    .message.typing span {
-        animation: typing 1s infinite;
-        display: inline-block;
-        margin: 0 2px;
+    .ai-msg.welcome .msg-content {
+        background: #eff6ff;
+        border-color: #dbeafe;
+        color: #1e40af;
+        font-weight: 700;
     }
 
-    .message.typing span:nth-child(2) { animation-delay: 0.2s; }
-    .message.typing span:nth-child(3) { animation-delay: 0.4s; }
+    /* Typing Indicator */
+    .typing-indicator { display: flex; gap: 4px; padding: 10px 15px; }
+    .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        background: #94a3b8;
+        border-radius: 50%;
+        animation: typing 1.4s infinite;
+    }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 
-    @@keyframes typing { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+    @@keyframes typing { 0%, 100% { transform: translateY(0); opacity: 0.5; } 50% { transform: translateY(-5px); opacity: 1; } }
 
-    .chat-input-area {
-        padding: 15px;
+    /* Quick Actions */
+    .quick-actions {
+        padding: 12px 20px;
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
         background: white;
         border-top: 1px solid #f1f5f9;
-        display: flex;
-        gap: 10px;
+        scrollbar-width: none;
     }
-
-    .chat-input-area input {
-        flex: 1;
+    .quick-actions::-webkit-scrollbar { display: none; }
+    .quick-actions button {
+        white-space: nowrap;
+        padding: 8px 16px;
+        background: #f1f5f9;
         border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 10px 15px;
-        font-size: 0.85rem;
-        outline: none;
-        transition: border-color 0.2s;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #475569;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .quick-actions button:hover { background: #e2e8f0; transform: translateY(-2px); }
+
+    /* Input Area */
+    .chat-input-area {
+        padding: 20px;
+        background: white;
+        border-top: 1px solid #f1f5f9;
     }
 
-    .chat-input-area input:focus { border-color: #0ea5e9; }
+    .input-wrapper {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        padding: 4px 6px;
+        transition: all 0.3s;
+    }
+
+    .input-wrapper:focus-within { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+
+    .input-wrapper input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        padding: 12px 15px;
+        font-size: 0.9rem;
+        outline: none;
+        color: #1e293b;
+    }
 
     .send-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        background: #0ea5e9;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: #2563eb;
         color: white;
         border: none;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: transform 0.2s;
+        transition: all 0.3s;
     }
 
-    .send-btn:hover { transform: scale(1.05); }
+    .send-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .send-btn:not(:disabled):hover { background: #1d4ed8; transform: scale(1.05); }
 </style>
 
 @code {
     bool isOpen = false;
     bool isTyping = false;
+    bool showNotification = false;
     string userInput = "";
     List<ChatMessage> messages = new();
 
-    void ToggleChat() => isOpen = !isOpen;
+    void ToggleChat() 
+    {
+        isOpen = !isOpen;
+        if (isOpen) showNotification = false;
+    }
+
+    async Task SendQuickAction(string text)
+    {
+        userInput = text;
+        await SendMessage();
+    }
 
     async Task SendMessage()
     {
@@ -274,22 +369,22 @@
 
         var userMsg = userInput;
         userInput = "";
-        messages.Add(new ChatMessage { Text = userMsg, IsUser = true });
+        messages.Add(new ChatMessage { Text = userMsg, IsUser = true, Time = DateTime.Now });
         
         isTyping = true;
         StateHasChanged();
 
         // Simulate AI thinking
-        await Task.Delay(800);
+        await Task.Delay(1000);
         
         var response = await AISvc.ChatWithAIAsync(userMsg);
-        messages.Add(new ChatMessage { Text = response, IsUser = false });
+        messages.Add(new ChatMessage { Text = response, IsUser = false, Time = DateTime.Now });
         
         isTyping = false;
         StateHasChanged();
         
-        // Auto scroll (optional via JS)
-        await JS.InvokeVoidAsync("eval", "document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight");
+        // Auto scroll
+        await JS.InvokeVoidAsync("eval", "var el = document.getElementById('chat-messages'); if(el) el.scrollTop = el.scrollHeight");
     }
 
     void HandleKeyUp(KeyboardEventArgs e)
@@ -301,5 +396,7 @@
     {
         public string Text { get; set; } = "";
         public bool IsUser { get; set; }
+        public DateTime Time { get; set; }
     }
 }
+
