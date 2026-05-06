@@ -1,0 +1,119 @@
+@page "/audit-log"
+@rendermode InteractiveServer
+@using HRPerformanceSystem.Models
+@using HRPerformanceSystem.Services
+@inject AuditService AuditSvc
+
+<div class="page-header">
+    <div>
+        <h1>📋 سجل التدقيق</h1>
+        <div class="subtitle">تتبع جميع العمليات والتغييرات على النظام</div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">جارٍ تحميل السجلات...</div>
+    </div>
+}
+else
+{
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 180px;">التاريخ والوقت</th>
+                        <th>العملية</th>
+                        <th>الوصف</th>
+                        <th>المستخدم</th>
+                        <th>الكيان</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (logs.Any())
+                    {
+                        @foreach (var log in logs)
+                        {
+                            <tr>
+                                <td style="font-size: 0.8rem; color: var(--text-muted); white-space: nowrap;">
+                                    @log.CreatedAt.ToString("yyyy/MM/dd HH:mm")
+                                </td>
+                                <td>
+                                    <span class="status-badge @GetActionClass(log.Action)">
+                                        @GetActionIcon(log.Action) @GetActionText(log.Action)
+                                    </span>
+                                </td>
+                                <td style="font-weight: 600;">@log.Description</td>
+                                <td style="color: var(--text-secondary);">@log.UserName</td>
+                                <td style="font-size: 0.8rem; color: var(--text-muted);">@log.EntityType #@log.EntityId</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <div class="icon">📋</div>
+                                    <h4>لا يوجد سجلات تدقيق</h4>
+                                    <p>ستظهر السجلات هنا عند إجراء أي عملية في النظام</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    List<AuditLog> logs = new();
+    bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        logs = await AuditSvc.GetRecentLogsAsync(100);
+        isLoading = false;
+    }
+
+    string GetActionText(AuditAction a) => a switch
+    {
+        AuditAction.Create => "إنشاء",
+        AuditAction.Update => "تعديل",
+        AuditAction.Delete => "حذف",
+        AuditAction.Approve => "اعتماد",
+        AuditAction.Submit => "إرسال",
+        AuditAction.Return => "إرجاع",
+        AuditAction.Login => "دخول",
+        AuditAction.Export => "تصدير",
+        _ => ""
+    };
+
+    string GetActionIcon(AuditAction a) => a switch
+    {
+        AuditAction.Create => "➕",
+        AuditAction.Update => "✏️",
+        AuditAction.Delete => "🗑️",
+        AuditAction.Approve => "✅",
+        AuditAction.Submit => "📤",
+        AuditAction.Return => "🔄",
+        AuditAction.Login => "🔑",
+        AuditAction.Export => "📊",
+        _ => ""
+    };
+
+    string GetActionClass(AuditAction a) => a switch
+    {
+        AuditAction.Create => "active",
+        AuditAction.Update => "review",
+        AuditAction.Delete => "returned",
+        AuditAction.Approve => "approved",
+        AuditAction.Submit => "submitted",
+        AuditAction.Return => "returned",
+        _ => "draft"
+    };
+}

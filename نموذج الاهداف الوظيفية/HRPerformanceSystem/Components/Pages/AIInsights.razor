@@ -1,0 +1,260 @@
+@page "/ai-insights"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using HRPerformanceSystem.Data
+@using HRPerformanceSystem.Models
+@using HRPerformanceSystem.Services
+@using Microsoft.EntityFrameworkCore
+@inject AIInsightsService AISvc
+@inject IJSRuntime JS
+
+<div class="page-header">
+    <div>
+        <h1 style="display:flex;align-items:center;gap:8px;"><Icon Name="brain" Size="28" style="color:var(--primary);" /> مركز الذكاء الاصطناعي</h1>
+        <div class="subtitle">تحليلات ذكية وتوصيات مبنية على البيانات</div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;">
+        <span class="ai-badge" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="cpu" Size="14" /> محرك التحليل نشط</span>
+        <button class="btn btn-primary" @onclick="Refresh" disabled="@isLoading" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="refresh-cw" Size="16" /> تحديث التحليل</button>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" style="display:flex;align-items:center;gap:8px;justify-content:center;"><Icon Name="brain" Size="20" /> جارٍ تحليل البيانات بالذكاء الاصطناعي...</div>
+    </div>
+}
+else if (report != null)
+{
+<!-- الملخص التنفيذي -->
+<div class="ai-card" style="margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="font-weight:900;font-size:1.2rem;display:flex;align-items:center;gap:10px;"><Icon Name="edit" Size="20" /> الملخص التنفيذي الذكي</h3>
+        <span style="font-size:0.7rem;color:var(--text-muted);">آخر تحديث: @report.GeneratedAt.ToString("HH:mm - yyyy/MM/dd")</span>
+    </div>
+    <div class="ai-summary-card">
+        <p style="font-size:0.95rem;line-height:1.8;color:var(--text-secondary);">@report.ExecutiveSummary</p>
+    </div>
+</div>
+
+<!-- الإحصائيات السريعة -->
+<div class="insight-grid">
+    <div class="premium-stat stagger-1">
+        <div class="stat-glow" style="background:#00a59b;"></div>
+        <div style="display:flex;align-items:center;gap:20px;">
+            <div style="width:60px;height:60px;border-radius:16px;background:linear-gradient(135deg,#00a59b,#008a82);display:flex;align-items:center;justify-content:center;color:white;"><Icon Name="bar-chart" Size="28" /></div>
+            <div>
+                <div style="font-size:0.8rem;color:var(--text-muted);font-weight:700;">المتوسط العام</div>
+                <div style="font-size:2rem;font-weight:900;color:var(--text-primary);">@report.OverallAverage%</div>
+            </div>
+        </div>
+    </div>
+    <div class="premium-stat stagger-2">
+        <div class="stat-glow" style="background:#8b5cf6;"></div>
+        <div style="display:flex;align-items:center;gap:20px;">
+            <div style="width:60px;height:60px;border-radius:16px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);display:flex;align-items:center;justify-content:center;color:white;"><Icon Name="users" Size="28" /></div>
+            <div>
+                <div style="font-size:0.8rem;color:var(--text-muted);font-weight:700;">التغطية</div>
+                <div style="font-size:2rem;font-weight:900;color:var(--text-primary);">@(report.TotalEmployees > 0 ? (report.TotalEvaluations * 100 / report.TotalEmployees) : 0)%</div>
+            </div>
+        </div>
+    </div>
+    <div class="premium-stat stagger-3">
+        <div class="stat-glow" style="background:#ef4444;"></div>
+        <div style="display:flex;align-items:center;gap:20px;">
+            <div style="width:60px;height:60px;border-radius:16px;background:linear-gradient(135deg,#ef4444,#dc2626);display:flex;align-items:center;justify-content:center;color:white;"><Icon Name="alert-triangle" Size="28" /></div>
+            <div>
+                <div style="font-size:0.8rem;color:var(--text-muted);font-weight:700;">تنبيهات المخاطر</div>
+                <div style="font-size:2rem;font-weight:900;color:var(--text-primary);">@report.AtRiskEmployees.Count</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+    <!-- تحليل القوة والضعف -->
+    <div class="ai-card">
+        <h3 style="font-weight:900;font-size:1.1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><Icon Name="sparkles" Size="20" /> نقاط القوة</h3>
+        <div class="swot-card swot-strengths">
+            @foreach (var s in report.Strengths)
+            {
+                <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
+                    <span style="color:#10b981;display:flex;"><Icon Name="check-circle" Size="16" /></span>
+                    <span style="font-size:0.85rem;color:var(--text-secondary);">@s</span>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="ai-card">
+        <h3 style="font-weight:900;font-size:1.1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><Icon Name="search" Size="20" /> فرص التحسين</h3>
+        <div class="swot-card swot-weaknesses">
+            @foreach (var w in report.Weaknesses)
+            {
+                <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">
+                    <span style="color:#ef4444;display:flex;"><Icon Name="alert-triangle" Size="16" /></span>
+                    <span style="font-size:0.85rem;color:var(--text-secondary);">@w</span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- الرسوم البيانية -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+    <div class="chart-card">
+        <h3 style="font-weight:800;font-size:1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><Icon Name="trending-up" Size="18" /> أداء الأقسام</h3>
+        <div style="height:250px;"><canvas id="deptBarChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+        <h3 style="font-weight:800;font-size:1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><Icon Name="target" Size="18" /> مقارنة الأقسام (رادار)</h3>
+        <div style="height:250px;"><canvas id="deptRadarChart"></canvas></div>
+    </div>
+</div>
+
+<!-- التنبؤات -->
+@if (report.Predictions.Any())
+{
+<div class="ai-card" style="margin-bottom:24px;">
+    <h3 style="font-weight:900;font-size:1.1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><Icon Name="eye" Size="20" /> التنبؤات الذكية</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;">
+        @foreach (var pred in report.Predictions)
+        {
+            <div style="padding:20px;background:linear-gradient(135deg,rgba(139,92,246,0.03),rgba(14,165,233,0.03));border-radius:var(--radius-sm);border:1px solid var(--border-light);">
+                <div style="font-size:0.8rem;color:var(--text-muted);font-weight:700;margin-bottom:8px;">@pred.Label</div>
+                <div style="font-size:1.8rem;font-weight:900;color:#8b5cf6;">@pred.PredictedScore%</div>
+                <div style="display:flex;gap:12px;margin-top:8px;">
+                    <span style="font-size:0.7rem;color:var(--text-muted);">ثقة: @pred.Confidence%</span>
+                    <span style="font-size:0.7rem;color:@(pred.Trend == "تصاعدي" ? "#10b981" : pred.Trend == "تنازلي" ? "#ef4444" : "#f59e0b");font-weight:800;display:inline-flex;align-items:center;gap:4px;"><Icon Name="@(pred.Trend == "تصاعدي" ? "trending-up" : pred.Trend == "تنازلي" ? "trending-down" : "minus")" Size="12" /> @pred.Trend</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+}
+
+<!-- الموظفون المعرضون للخطر -->
+@if (report.AtRiskEmployees.Any())
+{
+<div class="ai-card" style="margin-bottom:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="font-weight:900;font-size:1.1rem;display:flex;align-items:center;gap:8px;"><Icon Name="alert-triangle" Size="20" /> تنبيهات المخاطر الذكية</h3>
+        <span class="risk-badge critical">@report.AtRiskEmployees.Count تنبيه</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        @foreach (var risk in report.AtRiskEmployees)
+        {
+            <div class="rec-card">
+                <div class="rec-icon" style="background:@(risk.RiskLevel == 3 ? "rgba(239,68,68,0.1)" : risk.RiskLevel == 2 ? "rgba(245,158,11,0.1)" : "rgba(14,165,233,0.1)"); display:flex; align-items:center; justify-content:center;">
+                    <Icon Name="alert-circle" Size="24" Color="@(risk.RiskLevel == 3 ? "#ef4444" : risk.RiskLevel == 2 ? "#f59e0b" : "#0ea5e9")" />
+                </div>
+                <div style="flex:1;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <strong style="color:var(--text-primary);">@risk.EmployeeName</strong>
+                        <span class="risk-badge @(risk.RiskLevel == 3 ? "critical" : risk.RiskLevel == 2 ? "high" : "medium")">
+                            @(risk.RiskLevel == 3 ? "حرج" : risk.RiskLevel == 2 ? "مرتفع" : "متوسط")
+                        </span>
+                    </div>
+                    <div style="font-size:0.8rem;color:var(--text-muted);">@risk.Department • @risk.CurrentScore%</div>
+                    <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:4px;display:flex;align-items:flex-start;gap:6px;"><Icon Name="info" Size="14" style="flex-shrink:0;margin-top:2px;" /> <span>@risk.Recommendation</span></div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+}
+
+<!-- التوصيات -->
+<div class="ai-card" style="margin-bottom:24px;">
+    <h3 style="font-weight:900;font-size:1.1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><Icon Name="info" Size="20" /> توصيات الذكاء الاصطناعي</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+        @foreach (var rec in report.Recommendations)
+        {
+            <div class="rec-card">
+                <div class="rec-icon">@rec.Icon</div>
+                <div style="flex:1;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <strong style="color:var(--text-primary);font-size:0.95rem;">@rec.Title</strong>
+                        <span class="rec-priority @(rec.Priority == "عالية" ? "high" : rec.Priority == "متوسطة" ? "medium" : "ongoing")">@rec.Priority</span>
+                    </div>
+                    <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">@rec.Description</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- المتميزون -->
+@if (report.TopPerformers.Any())
+{
+<div class="ai-card">
+    <h3 style="font-weight:900;font-size:1.1rem;margin-bottom:16px;display:flex;align-items:center;gap:8px;"><Icon Name="star" Size="20" /> نخبة المتميزين</h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;">
+        @foreach (var top in report.TopPerformers)
+        {
+            <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--bg-hover);border-radius:var(--radius-sm);border:1px solid var(--border-light);">
+                <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:1.1rem;">@top.EmployeeName.Substring(0,1)</div>
+                <div style="flex:1;">
+                    <div style="font-weight:800;color:var(--text-primary);">@top.EmployeeName</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);">@top.Department</div>
+                    <div style="font-size:0.7rem;color:var(--primary);margin-top:2px;">@top.Insight</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-weight:900;color:var(--primary);font-size:1.3rem;">@top.Score%</div>
+                    <div style="font-size:0.65rem;font-weight:800;">@top.Badge</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+}
+}
+
+@code {
+    AIReport? report;
+    bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        report = await AISvc.GenerateFullReportAsync();
+        isLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!isLoading && report != null && firstRender)
+        {
+            await RenderCharts();
+        }
+    }
+
+    async Task RenderCharts()
+    {
+        try
+        {
+            if (report!.DepartmentInsights.Any())
+            {
+                var labels = report.DepartmentInsights.Select(d => d.Department).ToArray();
+                var scores = report.DepartmentInsights.Select(d => d.AverageScore).ToArray();
+                await JS.InvokeVoidAsync("renderBarChart", "deptBarChart", labels, scores, "#00a59b");
+
+                var datasets = new[] { new { label = "المتوسط", data = report.DepartmentInsights.Select(d => d.AverageScore).ToArray() } };
+                await JS.InvokeVoidAsync("renderRadarChart", "deptRadarChart", labels, datasets);
+            }
+        }
+        catch { }
+    }
+
+    async Task Refresh()
+    {
+        isLoading = true;
+        StateHasChanged();
+        await Task.Delay(500);
+        report = await AISvc.GenerateFullReportAsync();
+        isLoading = false;
+        StateHasChanged();
+        await Task.Delay(100);
+        await RenderCharts();
+    }
+}

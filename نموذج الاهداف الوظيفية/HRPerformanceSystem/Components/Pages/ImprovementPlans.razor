@@ -1,0 +1,630 @@
+@page "/improvement-plans"
+@attribute [Authorize(Roles = "Admin, HR, Manager")]
+@rendermode InteractiveServer
+@using HRPerformanceSystem.Models
+@using HRPerformanceSystem.Services
+@inject AIInsightsService AISvc
+@inject NotificationService NotifySvc
+@inject IJSRuntime JS
+
+<div class="page-header">
+    <div>
+        <div class="ai-badge" style="margin-bottom: 8px;display:inline-flex;align-items:center;gap:4px;"><Icon Name="target" Size="14" /> الذكاء الاصطناعي والتطوير</div>
+        <h1 style="display:flex;align-items:center;gap:8px;"> خطط التحسين التلقائية (PIP)</h1>
+        <div class="subtitle">خطط علاجية وتطويرية مخصصة تم توليدها بناءً على تحليل الأهداف والجدارات المنخفضة</div>
+    </div>
+    <div style="display: flex; gap: 12px; align-items:center;">
+        <button class="btn btn-ai" @onclick="LoadPlans" disabled="@isLoading" style="display:inline-flex;align-items:center;gap:6px;">
+            <Icon Name="refresh-cw" Size="16" /> تحديث الذكاء الاصطناعي
+        </button>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" style="display:flex;align-items:center;gap:8px;justify-content:center;"><Icon Name="cpu" Size="20" /> جارٍ معالجة البيانات وتوليد خطط التحسين...</div>
+    </div>
+}
+else if (!allPlans.Any())
+{
+    <div class="empty-state">
+        <div class="icon"><Icon Name="check-circle" Size="48" Color="var(--success)" /></div>
+        <h4>لا يوجد خطط تحسين مطلوبة</h4>
+        <p>مستوى أداء جميع الموظفين في النطاق الآمن ولا توجد أهداف أو جدارات منخفضة.</p>
+    </div>
+}
+else
+{
+    <!-- فلاتر البحث والترشيح -->
+    <div class="card glass-search" style="padding: 20px; margin-bottom: 24px; background: rgba(255,255,255,0.6); backdrop-filter: blur(10px); border: 1px solid var(--border-light);">
+        <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 16px; align-items: center;">
+            <div class="search-input-wrapper" style="position: relative;">
+                <input class="form-control" placeholder="بحث باسم الموظف أو الرقم..." @bind="searchTerm" @bind:event="oninput" style="padding-right: 40px; border-radius: 12px;" />
+                <div style="position:absolute; right:14px; top:14px; color:var(--text-muted);"><Icon Name="search" Size="16" /></div>
+            </div>
+            <select class="form-control" @bind="filterDept" style="border-radius: 12px;">
+                <option value="">كل الإدارات</option>
+                @foreach (var dept in departments) { <option value="@dept">@dept</option> }
+            </select>
+            <select class="form-control" @bind="filterPriority" style="border-radius: 12px;">
+                <option value="">كل الأولويات</option>
+                <option value="عالية جداً">أولوية قصوى</option>
+                <option value="عالية">عالية</option>
+                <option value="متوسطة">متوسطة</option>
+            </select>
+            <select class="form-control" @bind="filterType" style="border-radius: 12px;">
+                <option value="">كل الأنواع</option>
+                <option value="هدف وظيفي">أهداف وظيفية</option>
+                <option value="جدارة">جدارات سلوكية</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="stats-grid" style="margin-bottom: 30px;">
+        <div class="premium-stat card">
+            <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;"><Icon Name="users" Size="28" /></div>
+            <div class="stat-info">
+                <div class="label">إجمالي الخطط النشطة</div>
+                <div class="value">@FilteredPlans.Count()</div>
+            </div>
+        </div>
+        <div class="premium-stat card">
+            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);"><Icon Name="alert-triangle" Size="28" /></div>
+            <div class="stat-info">
+                <div class="label">حالات حرجة (أولوية قصوى)</div>
+                <div class="value">@FilteredPlans.Count(p => p.Priority == "عالية جداً")</div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:grid; gap:30px;">
+        @foreach (var plan in PagedPlans)
+        {
+            <div class="card premium-plan-card animate-in" style="border-right: 6px solid @(plan.Priority == "عالية جداً" ? "var(--danger)" : plan.Priority == "عالية" ? "var(--warning)" : "#0ea5e9");">
+                <!-- Progress Stepper -->
+                <div class="pip-stepper">
+                    <div class="step active">
+                        <div class="step-circle"><Icon Name="cpu" Size="14" /></div>
+                        <div class="step-label">تم التوليد</div>
+                    </div>
+                    <div class="step-connector @(plan.IsSent ? "active" : "")"></div>
+                    <div class="step @(plan.IsSent ? "active" : "")">
+                        <div class="step-circle"><Icon Name="send" Size="14" /></div>
+                        <div class="step-label">تم الإرسال</div>
+                    </div>
+                    <div class="step-connector @(plan.ProgressPercentage > 0 ? "active" : "")"></div>
+                    <div class="step @(plan.ProgressPercentage > 0 ? "active" : "")">
+                        <div class="step-circle"><Icon Name="trending-up" Size="14" /></div>
+                        <div class="step-label">قيد التنفيذ (@plan.ProgressPercentage%)</div>
+                    </div>
+                </div>
+
+                <!-- Header: Employee Info -->
+                <div class="plan-card-header">
+                    <div class="employee-meta">
+                        <div class="user-avatar-large">@plan.EmployeeName.Substring(0, 1)</div>
+                        <div class="info-group">
+                            <h3 class="employee-name">
+                                @plan.EmployeeName
+                                <span class="priority-badge @(plan.Priority == "عالية جداً" ? "critical" : plan.Priority == "عالية" ? "high" : "medium")">
+                                    أولوية @plan.Priority
+                                </span>
+                            </h3>
+                            <div class="employee-details">
+                                <span><Icon Name="briefcase" Size="14" /> @plan.JobTitle</span>
+                                <span class="separator">|</span>
+                                <span><Icon Name="hash" Size="14" /> @plan.EmployeeNumber</span>
+                                <span class="separator">|</span>
+                                <span><Icon Name="map-pin" Size="14" /> @plan.Department</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="timeframe-box">
+                        <div class="label">الفترة الزمنية للإصلاح</div>
+                        <div class="value"><Icon Name="clock" Size="16" /> @plan.Timeframe</div>
+                    </div>
+                </div>
+
+                <!-- Source Analysis -->
+                <div class="source-analysis-section">
+                    <div class="section-title">
+                        <Icon Name="@(plan.ItemType == "هدف وظيفي" ? "target" : "award")" Size="18" />
+                        تحليل الفجوة: @plan.ItemType
+                    </div>
+                    <div class="source-content">
+                        <div class="quote-text">"@plan.SourceItem"</div>
+                        <div class="score-tracking">
+                            <div class="score-item current">
+                                <span class="label">النتيجة الحالية</span>
+                                <div class="progress-mini">
+                                    <div class="progress-bar-mini bg-danger" style="width: @plan.CurrentScore%"></div>
+                                </div>
+                                <span class="value">@plan.CurrentScore%</span>
+                            </div>
+                            <div class="score-divider">
+                                <Icon Name="chevrons-left" Size="20" />
+                            </div>
+                            <div class="score-item target">
+                                <span class="label">المستهدف المطلوب</span>
+                                <div class="progress-mini">
+                                    <div class="progress-bar-mini bg-success" style="width: @plan.TargetScore%"></div>
+                                </div>
+                                <span class="value">@plan.TargetScore%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Executive Tasks Table -->
+                <div class="executive-tasks-section">
+                    <div class="section-title">
+                        <Icon Name="list" Size="18" />
+                        خطة المهام التنفيذية (Executive Execution Plan)
+                    </div>
+                    <div class="table-responsive">
+                        <table class="tasks-table">
+                            <thead>
+                                <tr>
+                                    <th>المهمة التنفيذية</th>
+                                    <th>المسؤول</th>
+                                    <th>الموعد النهائي</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var task in plan.ExecutiveTasks)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div style="font-weight: 700; color: var(--text-primary);">@task.Title</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted);">@task.Description</div>
+                                        </td>
+                                        <td><span class="badge-outline">@task.Responsible</span></td>
+                                        <td><span style="font-size: 0.8rem; font-weight: 600;">@task.Deadline</span></td>
+                                        <td><span class="status-dot">@task.Status</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="plan-card-footer">
+                    <div class="ai-verification">
+                        <div class="engine-tag"><Icon Name="cpu" Size="12" /> AI Engine v4.2</div>
+                        <span>تم تحليل الأداء وتوليد المسار العلاجي تلقائياً</span>
+                    </div>
+                    <div class="actions-group">
+                        <button class="btn btn-outline-primary btn-sm" onclick="window.print()" type="button" style="padding: 6px 12px;">
+                            <Icon Name="printer" Size="14" /> 
+                            <span>طباعة</span>
+                        </button>
+                        <button class="btn btn-primary btn-sm btn-premium @(plan.IsSent ? "btn-sent" : "")" @onclick="() => SendToEmployee(plan)" disabled="@isSending" type="button">
+                            @if (isSending)
+                            {
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            }
+                            else if (plan.IsSent)
+                            {
+                                <Icon Name="check" Size="14" />
+                                <span>تم الإرسال مسبقاً</span>
+                            }
+                            else
+                            {
+                                <Icon Name="send" Size="14" />
+                                <span>اعتماد وإرسال</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- التحكم في الصفحات -->
+    @if (TotalPages > 1)
+    {
+        <div class="pagination-container">
+            <button class="btn btn-outline btn-sm" disabled="@(currentPage == 1)" @onclick="() => currentPage--">السابق</button>
+            <div class="page-indicator">
+                صفحة <span>@currentPage</span> من @TotalPages
+            </div>
+            <button class="btn btn-outline btn-sm" disabled="@(currentPage == TotalPages)" @onclick="() => currentPage++">التالي</button>
+        </div>
+    }
+}
+
+<style>
+    .premium-plan-card {
+        padding: 28px;
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+        border: 1px solid var(--border-light);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    .premium-plan-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+        border-color: var(--primary-light);
+    }
+    .plan-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 24px;
+    }
+    .employee-meta {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+    }
+    .user-avatar-large {
+        width: 70px;
+        height: 70px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, var(--bg-hover) 0%, #f1f5f9 100%);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        font-weight: 900;
+        border: 2px solid #fff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .employee-name {
+        margin: 0;
+        font-weight: 850;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--text-primary);
+        font-size: 1.25rem;
+    }
+    .priority-badge {
+        font-size: 0.75rem;
+        padding: 5px 12px;
+        border-radius: 8px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+    .priority-badge.critical { background: #fef2f2; color: #ef4444; border: 1px solid #fee2e2; }
+    .priority-badge.high { background: #fffbeb; color: #f59e0b; border: 1px solid #fef3c7; }
+    .priority-badge.medium { background: #f0f9ff; color: #0ea5e9; border: 1px solid #e0f2fe; }
+
+    .employee-details {
+        display: flex;
+        gap: 15px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-top: 8px;
+        font-weight: 500;
+    }
+    .separator { opacity: 0.3; }
+
+    .timeframe-box {
+        text-align: left;
+        background: #f8fafc;
+        padding: 12px 20px;
+        border-radius: 14px;
+        border: 1px solid #f1f5f9;
+    }
+    .timeframe-box .label { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; }
+    .timeframe-box .value { font-weight: 850; color: var(--primary); display: flex; align-items: center; gap: 8px; font-size: 1.1rem; }
+
+    .source-analysis-section {
+        background: linear-gradient(to left, #f8fafc, #ffffff);
+        border: 1px solid #f1f5f9;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 850;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        margin-bottom: 15px;
+    }
+    .quote-text {
+        font-style: normal;
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        font-weight: 500;
+        padding-right: 15px;
+        border-right: 3px solid var(--primary-light);
+    }
+    .score-tracking {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+    .score-item { flex: 1; }
+    .score-item .label { font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 600; }
+    .score-item .value { font-weight: 900; font-size: 1.25rem; color: var(--text-primary); }
+    .progress-mini { height: 8px; background: #f1f5f9; border-radius: 10px; overflow: hidden; margin: 6px 0; }
+    .progress-bar-mini { height: 100%; border-radius: 10px; }
+
+    .tasks-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+        margin-top: 10px;
+    }
+    .tasks-table th {
+        text-align: right;
+        padding: 12px 15px;
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        border-bottom: 1px solid var(--border-light);
+    }
+    .tasks-table td {
+        padding: 15px;
+        background: #fff;
+        border-top: 1px solid #f1f5f9;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .tasks-table td:first-child { border-right: 1px solid #f1f5f9; border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+    .tasks-table td:last-child { border-left: 1px solid #f1f5f9; border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+    
+    .tasks-table tr:hover td { background: #fdfdfd; }
+
+    .badge-outline {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+    .status-dot {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #475569;
+    }
+    .status-dot::before {
+        content: '';
+        width: 10px;
+        height: 10px;
+        background: #94a3b8;
+        border-radius: 50%;
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.1);
+    }
+
+    .plan-card-footer {
+        margin-top: 28px;
+        padding-top: 24px;
+        border-top: 1px dashed #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .ai-verification { display: flex; flex-direction: column; gap: 4px; }
+    .ai-verification span { font-size: 0.75rem; color: var(--text-muted); }
+    .engine-tag { 
+        display: inline-flex; 
+        align-items: center; 
+        gap: 5px; 
+        font-size: 0.7rem; 
+        font-weight: 900; 
+        color: var(--primary);
+        background: rgba(13, 148, 136, 0.08);
+        padding: 2px 8px;
+        border-radius: 6px;
+        width: fit-content;
+    }
+    
+    .btn-premium {
+        border-radius: 10px;
+        padding: 8px 18px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+    .btn-premium:hover { transform: scale(1.02); }
+
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 15px;
+        margin: 40px 0;
+        padding-bottom: 40px;
+    }
+    .page-indicator {
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        background: #fff;
+        padding: 8px 16px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+    .page-indicator span { color: var(--primary); font-weight: 900; }
+
+    .pip-stepper {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+        padding: 10px 40px;
+        background: #f8fafc;
+        border-radius: 12px;
+        border: 1px solid #f1f5f9;
+    }
+    .pip-stepper .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        position: relative;
+        z-index: 2;
+        color: var(--text-muted);
+        transition: all 0.3s;
+    }
+    .pip-stepper .step.active { color: var(--primary); }
+    .pip-stepper .step-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .pip-stepper .step.active .step-circle {
+        border-color: var(--primary);
+        background: var(--primary);
+        color: #fff;
+        box-shadow: 0 0 10px rgba(13, 148, 136, 0.3);
+    }
+    .pip-stepper .step-label { font-size: 0.7rem; font-weight: 800; }
+    .pip-stepper .step-connector {
+        flex: 1;
+        height: 3px;
+        background: #e2e8f0;
+        margin: 0 -10px;
+        margin-bottom: 22px;
+        z-index: 1;
+    }
+    .pip-stepper .step-connector.active { background: var(--primary); }
+
+    .btn-sent {
+        background: #f0fdfa !important;
+        color: #0d9488 !important;
+        border: 1px solid #99f6e4 !important;
+        cursor: default !important;
+    }
+
+    @@media print {
+        .page-header, .glass-search, .stats-grid, .btn-ai, .plan-card-footer { display: none !important; }
+        .premium-plan-card { border: 1px solid #eee !important; box-shadow: none !important; break-inside: avoid; margin-bottom: 20px; }
+        body { background: white !important; }
+    }
+</style>
+
+@code {
+    List<ImprovementPlan> allPlans = new();
+    List<string> departments = new();
+    bool isLoading = true;
+    bool isSending = false;
+
+    // Filters
+    string searchTerm = "";
+    string filterDept = "";
+    string filterPriority = "";
+    string filterType = "";
+
+    // Pagination
+    int currentPage = 1;
+    int pageSize = 5;
+
+    IEnumerable<ImprovementPlan> FilteredPlans => allPlans.Where(p =>
+        (string.IsNullOrEmpty(searchTerm) || p.EmployeeName.Contains(searchTerm) || p.EmployeeNumber.Contains(searchTerm)) &&
+        (string.IsNullOrEmpty(filterDept) || p.Department == filterDept) &&
+        (string.IsNullOrEmpty(filterPriority) || p.Priority == filterPriority) &&
+        (string.IsNullOrEmpty(filterType) || p.ItemType == filterType)
+    );
+
+    IEnumerable<ImprovementPlan> PagedPlans => FilteredPlans
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    int TotalPages => (int)Math.Ceiling(FilteredPlans.Count() / (double)pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlans();
+    }
+
+    async Task LoadPlans()
+    {
+        isLoading = true;
+        currentPage = 1;
+        StateHasChanged();
+        
+        await Task.Delay(800); // Simulate AI processing
+        allPlans = await AISvc.GenerateImprovementPlansAsync();
+        
+        // Mock some progress for visual demo
+        if (allPlans.Count > 0) {
+            allPlans[0].IsSent = true;
+            if (allPlans[0].ExecutiveTasks.Count > 0) {
+                allPlans[0].ExecutiveTasks[0].Status = "مكتمل";
+            }
+        }
+        if (allPlans.Count > 1) {
+            allPlans[1].IsSent = true;
+            foreach(var t in allPlans[1].ExecutiveTasks.Take(2)) t.Status = "قيد التنفيذ";
+        }
+
+        departments = allPlans
+            .Select(p => p.Department)
+            .Where(d => !string.IsNullOrEmpty(d))
+            .Distinct()
+            .OrderBy(d => d)
+            .ToList();
+            
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    async Task PrintPlan()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    async Task SendToEmployee(ImprovementPlan plan)
+    {
+        Console.WriteLine($"[PIP] Sending plan for {plan.EmployeeName} (ID: {plan.EmployeeId})");
+        isSending = true;
+        StateHasChanged();
+        
+        try 
+        {
+            await Task.Delay(1000); // Simulate network
+            
+            await NotifySvc.CreateAsync(
+                "خطة تحسين أداء جديدة",
+                $"تم اعتماد خطة تحسين أداء لك بناءً على تحليل نتائجك في {plan.SourceItem}. يرجى مراجعة المهام التنفيذية.",
+                NotificationType.Warning,
+                $"/profile",
+                plan.UserId
+            );
+
+            plan.IsSent = true;
+            Console.WriteLine($"[PIP] Notification created for {plan.UserId}");
+            await JS.InvokeVoidAsync("alert", $"✅ تم اعتماد الخطة بنجاح!\n\nتم إرسال التنبيه للموظف: {plan.EmployeeName}\nمعرف الموظف: {plan.EmployeeNumber}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[PIP] Error sending plan: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", "❌ حدث خطأ أثناء إرسال الخطة. يرجى المحاولة مرة أخرى.");
+        }
+        finally
+        {
+            isSending = false;
+            StateHasChanged();
+        }
+    }
+}

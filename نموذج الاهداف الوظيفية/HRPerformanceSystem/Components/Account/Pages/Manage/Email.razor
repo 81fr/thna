@@ -1,0 +1,197 @@
+@page "/Account/Manage/Email"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using HRPerformanceSystem.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>إدارة البريد الإلكتروني | نظام إدارة الأداء</PageTitle>
+
+<div class="profile-section">
+    <div class="section-title mb-4">
+        <h3>إدارة البريد الإلكتروني</h3>
+    </div>
+
+    <StatusMessage Message="@message"/>
+    
+    <form @onsubmit="OnSendEmailVerificationAsync" @formname="send-verification" id="send-verification-form" method="post">
+        <AntiforgeryToken />
+    </form>
+
+    <EditForm Model="Input" FormName="change-email" OnValidSubmit="OnValidSubmitAsync" method="post">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger mb-3" role="alert" />
+
+        <div class="form-group mb-3">
+            <label for="email" class="form-label">البريد الإلكتروني الحالي</label>
+            <div class="input-with-icon">
+                <input type="text" value="@email" id="email" class="form-control premium-input" placeholder="البريد الإلكتروني" disabled />
+                <i class="bi bi-envelope icon"></i>
+                @if (isEmailConfirmed)
+                {
+                    <span class="verification-badge text-success">
+                        <i class="bi bi-patch-check-fill"></i> مؤكد
+                    </span>
+                }
+            </div>
+            @if (!isEmailConfirmed)
+            {
+                <button type="submit" class="btn btn-link text-warning p-0 mt-1" form="send-verification-form">إرسال بريد التحقق</button>
+            }
+        </div>
+
+        <div class="form-group mb-4">
+            <label for="Input.NewEmail" class="form-label">البريد الإلكتروني الجديد</label>
+            <div class="input-with-icon">
+                <InputText @bind-Value="Input.NewEmail" id="Input.NewEmail" class="form-control premium-input" autocomplete="email" aria-required="true" placeholder="أدخل البريد الجديد" />
+                <i class="bi bi-envelope-plus icon"></i>
+            </div>
+            <ValidationMessage For="() => Input.NewEmail" class="text-danger small" />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-premium px-5">تغيير البريد الإلكتروني</button>
+    </EditForm>
+</div>
+
+<style>
+    .premium-input {
+        border-radius: 12px;
+        padding: 12px 15px 12px 45px !important;
+        border: 1.5px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+    .premium-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(0, 165, 155, 0.1);
+    }
+    .input-with-icon {
+        position: relative;
+    }
+    .input-with-icon .icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 1.1rem;
+    }
+    .verification-badge {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.85rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .btn-premium {
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary) 0%, #0d9488 100%);
+        border: none;
+        box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+    }
+    .section-title h3 {
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+</style>
+
+@code {
+    private string? message;
+    private ApplicationUser? user;
+    private string? email;
+    private bool isEmailConfirmed;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm(FormName = "change-email")]
+    private InputModel Input { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        user = await UserManager.GetUserAsync(HttpContext.User);
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        email = await UserManager.GetEmailAsync(user);
+        isEmailConfirmed = await UserManager.IsEmailConfirmedAsync(user);
+
+        Input.NewEmail ??= email;
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        if (Input.NewEmail is null || Input.NewEmail == email)
+        {
+            message = "لم يتم تغيير البريد الإلكتروني.";
+            return;
+        }
+
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateChangeEmailTokenAsync(user, Input.NewEmail);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmailChange").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["email"] = Input.NewEmail, ["code"] = code });
+
+        await EmailSender.SendConfirmationLinkAsync(user, Input.NewEmail, HtmlEncoder.Default.Encode(callbackUrl));
+
+        message = "تم إرسال رابط تأكيد تغيير البريد. يرجى مراجعة بريدك الإلكتروني.";
+    }
+
+    private async Task OnSendEmailVerificationAsync()
+    {
+        if (email is null)
+        {
+            return;
+        }
+
+        if (user is null)
+        {
+            RedirectManager.RedirectToInvalidUser(UserManager, HttpContext);
+            return;
+        }
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+
+        await EmailSender.SendConfirmationLinkAsync(user, email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        message = "تم إرسال بريد التحقق. يرجى مراجعة بريدك الإلكتروني.";
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "البريد الإلكتروني مطلوب")]
+        [EmailAddress(ErrorMessage = "البريد الإلكتروني غير صحيح")]
+        [Display(Name = "البريد الإلكتروني الجديد")]
+        public string? NewEmail { get; set; }
+    }
+}

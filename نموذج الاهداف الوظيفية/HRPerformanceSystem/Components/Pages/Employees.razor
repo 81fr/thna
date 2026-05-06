@@ -1,0 +1,452 @@
+@page "/employees"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using HRPerformanceSystem.Data
+@using HRPerformanceSystem.Models
+@using HRPerformanceSystem.Services
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject CalculationService CalcService
+@inject AuditService AuditSvc
+@inject IServiceProvider ServiceProvider
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.Extensions.DependencyInjection
+
+<div class="page-header">
+    <div>
+        <div class="ai-badge" style="margin-bottom: 8px;display:inline-flex;align-items:center;gap:4px;"><Icon Name="users" Size="14" /> إدارة الكوادر البشرية</div>
+        <h1>إدارة الموظفين</h1>
+        <div class="subtitle">تنظيم بيانات الموظفين ومتابعة حالة عقودهم ومواثيقهم</div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button class="btn btn-ai" @onclick="ShowAddModal" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="plus" Size="16" /> إضافة موظف جديد</button>
+    </div>
+</div>
+
+<div class="stats-grid" style="margin-bottom: 30px;">
+    <div class="premium-stat card">
+        <div class="stat-icon" style="background: rgba(0, 165, 155, 0.1); color: var(--primary);"><Icon Name="users" Size="28" /></div>
+        <div class="stat-info">
+            <div class="label">إجمالي الموظفين</div>
+            <div class="value">@employees.Count</div>
+        </div>
+    </div>
+    <div class="premium-stat card">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);"><Icon Name="check-circle" Size="28" /></div>
+        <div class="stat-info">
+            <div class="label">فعال</div>
+            <div class="value">@employees.Count(e => e.IsActive)</div>
+        </div>
+    </div>
+    <div class="premium-stat card">
+        <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;"><Icon Name="user" Size="28" /></div>
+        <div class="stat-info">
+            <div class="label">قيادات</div>
+            <div class="value">@employees.Count(e => e.CharterType == CharterType.Leader)</div>
+        </div>
+    </div>
+    <div class="premium-stat card">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);"><Icon Name="document" Size="28" /></div>
+        <div class="stat-info">
+            <div class="label">بانتظار المواثيق</div>
+            <div class="value">@employees.Count(e => !EmployeeEvaluations.ContainsKey(e.Id))</div>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">جارٍ تحميل بيانات الموظفين...</div>
+    </div>
+}
+else
+{
+<!-- بحث وفلتر -->
+<!-- بحث وفلتر -->
+<div class="card glass-search" style="padding: 20px; margin-bottom: 24px; background: rgba(255,255,255,0.6); backdrop-filter: blur(10px); border: 1px solid var(--border-light);">
+    <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 20px; align-items: center;">
+        <div class="search-input-wrapper" style="position: relative;">
+            <input class="form-control" placeholder="بحث بالاسم أو الرقم الوظيفي..." @bind="searchTerm" @bind:event="oninput" style="padding-right: 40px; border-radius: 12px;" />
+        </div>
+        <select class="form-control" @bind="filterDept" style="border-radius: 12px;">
+            <option value="">كل الإدارات</option>
+            @foreach (var dept in departments) { <option value="@dept">@dept</option> }
+        </select>
+        <select class="form-control" @bind="filterType" style="border-radius: 12px;">
+            <option value="">كل الأنواع</option>
+            <option value="Employee">وظيفي</option>
+            <option value="Leader">قيادي</option>
+        </select>
+    </div>
+</div>
+
+<!-- جدول الموظفين -->
+<div class="card animate-in" style="padding: 0; overflow: hidden; border-radius: 20px;">
+    <div class="table-container">
+        <table class="charter-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>البيانات الأساسية</th>
+                    <th>الإدارة والمدير</th>
+                    <th>الميثاق</th>
+                    <th style="width: 150px;">مستوى الأداء</th>
+                    <th>الحالة</th>
+                    <th style="width: 100px;">إجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var (emp, idx) in FilteredEmployees.Select((e, i) => (e, i + 1)))
+                {
+                    <tr>
+                        <td style="color: var(--text-muted); font-weight: 700;">@idx.ToString("D2")</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.75rem;">@emp.FullName[0]</div>
+                                <div>
+                                    <div style="font-weight: 800; color: var(--text-primary); font-size: 0.95rem;">@emp.FullName</div>
+                                    <div style="font-size: 0.75rem; color: var(--primary); font-weight: 700;">@emp.EmployeeNumber • @emp.JobTitle</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size: 0.85rem; font-weight: 600;">@emp.Department</div>
+                            <div style="font-size: 0.7rem; color: var(--text-muted);">المدير: @emp.DirectManager</div>
+                        </td>
+                        <td>
+                            <span class="status-badge @(emp.CharterType == CharterType.Leader ? "review" : "active")" style="font-size: 0.65rem; display:inline-flex; align-items:center; gap:4px;">
+                                <Icon Name="@(emp.CharterType == CharterType.Leader ? "user" : "settings")" Size="12" /> @(emp.CharterType == CharterType.Leader ? "قيادي" : "وظيفي")
+                            </span>
+                        </td>
+                        <td>
+                            @{
+                                var eval = EmployeeEvaluations.GetValueOrDefault(emp.Id);
+                                if (eval != null)
+                                {
+                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem;">
+                                            <span style="font-weight: 800; color: @CalcService.GetRatingColor(eval.FinalScore);">@eval.FinalScore.ToString("F1")%</span>
+                                            <span style="color: var(--text-muted); font-weight: 600;">@CalcService.GetRating(eval.FinalScore)</span>
+                                        </div>
+                                        <div class="weight-indicator" style="margin-top: 0; height: 6px;">
+                                            <div class="weight-fill" style="width: @eval.FinalScore%; background: @CalcService.GetRatingColor(eval.FinalScore);"></div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span style="font-size: 0.65rem; color: var(--text-muted);">لم يتم إنشاء ميثاق</span>
+                                }
+                            }
+                        </td>
+                        <td>
+                            <span class="status-badge @(emp.IsActive ? "active" : "inactive")" style="font-size: 0.65rem;">
+                                @(emp.IsActive ? "فعال" : "غير فعال")
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-outline btn-sm" @onclick="() => EditEmployee(emp)" title="تعديل" style="display:flex;align-items:center;justify-content:center;"><Icon Name="edit" Size="16" /></button>
+                                <button class="btn btn-outline btn-sm" style="color: var(--danger); display:flex; align-items:center; justify-content:center;" @onclick="() => ConfirmDelete(emp)" title="حذف"><Icon Name="trash" Size="16" /></button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (!FilteredEmployees.Any())
+    {
+        <div class="empty-state">
+            <div class="icon"><Icon Name="users" Size="48" Color="var(--text-muted)" /></div>
+            <h4>لا يوجد موظفين</h4>
+            <p>ابدأ بإضافة موظفين للنظام</p>
+        </div>
+    }
+</div>
+}
+
+<!-- Modal إضافة/تعديل -->
+@if (showModal)
+{
+    <div class="modal-backdrop" @onclick="CloseModal" style="display: flex; visibility: visible; opacity: 1;">
+        <div class="modal modal-lg" @onclick:stopPropagation="true" style="display: block !important; opacity: 1 !important; visibility: visible !important;">
+            <div class="modal-header">
+                <h3 style="display:flex;align-items:center;gap:8px;"><Icon Name="@(editingEmployee.Id == 0 ? "plus" : "edit")" Size="20" style="color:var(--primary);" /> @(editingEmployee.Id == 0 ? "إضافة موظف جديد" : "تعديل بيانات الموظف")</h3>
+                <button class="btn btn-outline btn-sm" @onclick="CloseModal">✕</button>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>اسم الموظف *</label>
+                    <input class="form-control" @bind="editingEmployee.FullName" placeholder="أدخل اسم الموظف الرباعي" />
+                </div>
+                <div class="form-group">
+                    <label>الرقم الوظيفي *</label>
+                    <input class="form-control" @bind="editingEmployee.EmployeeNumber" placeholder="مثال: EMP001" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>المسمى الوظيفي</label>
+                    <input class="form-control" @bind="editingEmployee.JobTitle" placeholder="مثال: أخصائي موارد بشرية" />
+                </div>
+                <div class="form-group">
+                    <label>الإدارة / القسم</label>
+                    <input class="form-control" @bind="editingEmployee.Department" placeholder="مثال: الموارد البشرية" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>المدير المباشر</label>
+                    <input class="form-control" @bind="editingEmployee.DirectManager" />
+                </div>
+                <div class="form-group">
+                    <label>البريد الإلكتروني</label>
+                    <input class="form-control" type="email" @bind="editingEmployee.Email" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>رقم الجوال</label>
+                    <input class="form-control" @bind="editingEmployee.Phone" />
+                </div>
+                <div class="form-group">
+                    <label>نوع الدوام</label>
+                    <select class="form-control" @bind="editingEmployee.AttendanceType">
+                        <option value="@AttendanceType.FullTime">دوام كامل</option>
+                        <option value="@AttendanceType.PartTime">دوام جزئي</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>نوع الميثاق</label>
+                    <select class="form-control" @bind="editingEmployee.CharterType">
+                        <option value="@CharterType.Employee">ميثاق الأداء الوظيفي</option>
+                        <option value="@CharterType.Leader">الميثاق القيادي</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>الحالة</label>
+                    <select class="form-control" @bind="editingEmployee.IsActive">
+                        <option value="true">فعّال</option>
+                        <option value="false">غير فعّال</option>
+                    </select>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div style="color: var(--danger); margin-top: 12px; font-size: 0.85rem; padding: 10px; background: rgba(239,68,68,0.05); border-radius: 8px; display:flex; align-items:center; gap:6px;"><Icon Name="alert-triangle" Size="16" /> @errorMessage</div>
+            }
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" @onclick="SaveEmployee" disabled="@isSaving">
+                    @if (isSaving) { <span style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="refresh-cw" Size="16" /> جارٍ الحفظ...</span> } else { <span style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="save" Size="16" /> حفظ</span> }
+                </button>
+                <button class="btn btn-outline" @onclick="CloseModal">إلغاء</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal حذف -->
+@if (showDeleteConfirm)
+{
+    <div class="modal-backdrop" @onclick="() => showDeleteConfirm = false" style="display: flex; visibility: visible; opacity: 1;">
+        <div class="modal" @onclick:stopPropagation="true" style="max-width: 450px; display: block !important; opacity: 1 !important; visibility: visible !important;">
+            <div class="modal-header">
+                <h3 style="display:flex;align-items:center;gap:8px;"><Icon Name="alert-triangle" Size="20" /> تأكيد الحذف</h3>
+            </div>
+            <p>هل أنت متأكد من حذف الموظف <strong>@deletingEmployee?.FullName</strong>؟</p>
+            <p style="color: var(--danger); font-size: 0.85rem;">سيتم حذف جميع التقييمات المرتبطة بهذا الموظف.</p>
+            <div class="modal-footer">
+                <button class="btn btn-danger" @onclick="DeleteEmployee" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="trash" Size="16" /> حذف</button>
+                <button class="btn btn-outline" @onclick="() => showDeleteConfirm = false">إلغاء</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<Employee> employees = new();
+    List<string> departments = new();
+    Dictionary<int, PerformanceEvaluation> EmployeeEvaluations = new();
+    Employee editingEmployee = new();
+    Employee? deletingEmployee;
+    bool showModal, showDeleteConfirm, isLoading = true, isSaving;
+    string searchTerm = "", filterDept = "", filterType = "", errorMessage = "";
+
+    IEnumerable<Employee> FilteredEmployees => employees.Where(e =>
+        (string.IsNullOrEmpty(searchTerm) || e.FullName.Contains(searchTerm) || e.EmployeeNumber.Contains(searchTerm)) &&
+        (string.IsNullOrEmpty(filterDept) || e.Department == filterDept) &&
+        (string.IsNullOrEmpty(filterType) || e.CharterType.ToString() == filterType)
+    );
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    async Task LoadData()
+    {
+        using var Db = DbFactory.CreateDbContext();
+        employees = await Db.Employees.OrderBy(e => e.FullName).ToListAsync();
+        departments = employees.Select(e => e.Department).Where(d => !string.IsNullOrEmpty(d)).Distinct().ToList();
+        
+        // التحميل المسبق للتقييمات للعرض السريع
+        var evals = await Db.Evaluations
+            .Include(e => e.Goals)
+            .Include(e => e.Competencies)
+            .ToListAsync();
+            
+        EmployeeEvaluations = evals
+            .GroupBy(e => e.EmployeeId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(e => e.Year).First());
+        
+        isLoading = false;
+    }
+
+    void ShowAddModal()
+    {
+        editingEmployee = new Employee();
+        errorMessage = "";
+        showModal = true;
+    }
+
+    void EditEmployee(Employee emp)
+    {
+        editingEmployee = new Employee
+        {
+            Id = emp.Id, FullName = emp.FullName, EmployeeNumber = emp.EmployeeNumber,
+            JobTitle = emp.JobTitle, Department = emp.Department, DirectManager = emp.DirectManager,
+            Email = emp.Email, Phone = emp.Phone, AttendanceType = emp.AttendanceType,
+            CharterType = emp.CharterType, IsActive = emp.IsActive
+        };
+        errorMessage = "";
+        showModal = true;
+    }
+
+    async Task SaveEmployee()
+    {
+        if (string.IsNullOrWhiteSpace(editingEmployee.FullName))
+        {
+            errorMessage = "اسم الموظف مطلوب";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(editingEmployee.EmployeeNumber))
+        {
+            errorMessage = "الرقم الوظيفي مطلوب";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            using var Db = DbFactory.CreateDbContext();
+            if (editingEmployee.Id == 0)
+            {
+                // Check duplicate employee number
+                if (await Db.Employees.AnyAsync(e => e.EmployeeNumber == editingEmployee.EmployeeNumber))
+                {
+                    errorMessage = "الرقم الوظيفي مستخدم بالفعل";
+                    isSaving = false;
+                    return;
+                }
+                editingEmployee.CreatedAt = DateTime.Now;
+                
+                // Create Identity User
+                using var scope = ServiceProvider.CreateScope();
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                
+                string emailToUse = string.IsNullOrWhiteSpace(editingEmployee.Email) 
+                    ? $"{editingEmployee.EmployeeNumber.ToLower()}@company.com" 
+                    : editingEmployee.Email;
+
+                var user = new ApplicationUser 
+                { 
+                    UserName = emailToUse, 
+                    Email = emailToUse, 
+                    EmailConfirmed = true 
+                };
+                
+                var result = await userManager.CreateAsync(user, "Emp@123456");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(user, "Employee");
+                    editingEmployee.UserId = user.Id;
+                }
+                else
+                {
+                    errorMessage = "فشل في إنشاء حساب المستخدم: " + string.Join(", ", result.Errors.Select(e => e.Description));
+                    isSaving = false;
+                    return;
+                }
+
+                Db.Employees.Add(editingEmployee);
+                await Db.SaveChangesAsync();
+                await AuditSvc.LogAsync(AuditAction.Create, "Employee", editingEmployee.Id, $"إضافة موظف: {editingEmployee.FullName}");
+            }
+            else
+            {
+                var existing = await Db.Employees.FindAsync(editingEmployee.Id);
+                if (existing != null)
+                {
+                    existing.FullName = editingEmployee.FullName;
+                    existing.EmployeeNumber = editingEmployee.EmployeeNumber;
+                    existing.JobTitle = editingEmployee.JobTitle;
+                    existing.Department = editingEmployee.Department;
+                    existing.DirectManager = editingEmployee.DirectManager;
+                    existing.Email = editingEmployee.Email;
+                    existing.Phone = editingEmployee.Phone;
+                    existing.AttendanceType = editingEmployee.AttendanceType;
+                    existing.CharterType = editingEmployee.CharterType;
+                    existing.IsActive = editingEmployee.IsActive;
+                    await Db.SaveChangesAsync();
+                    await AuditSvc.LogAsync(AuditAction.Update, "Employee", existing.Id, $"تعديل بيانات: {existing.FullName}");
+                }
+            }
+            await LoadData();
+            showModal = false;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"حدث خطأ: {ex.Message} {(ex.InnerException != null ? " - " + ex.InnerException.Message : "")}";
+            Console.WriteLine(ex.ToString());
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    void ConfirmDelete(Employee emp)
+    {
+        deletingEmployee = emp;
+        showDeleteConfirm = true;
+    }
+
+    async Task DeleteEmployee()
+    {
+        if (deletingEmployee != null)
+        {
+            using var Db = DbFactory.CreateDbContext();
+            var emp = await Db.Employees.FindAsync(deletingEmployee.Id);
+            if (emp != null)
+            {
+                emp.IsDeleted = true;
+                await Db.SaveChangesAsync();
+                await AuditSvc.LogAsync(AuditAction.Delete, "Employee", emp.Id, $"حذف موظف (Soft Delete): {deletingEmployee.FullName}");
+                employees.RemoveAll(e => e.Id == deletingEmployee.Id);
+            }
+        }
+        showDeleteConfirm = false;
+    }
+
+    void CloseModal() => showModal = false;
+}

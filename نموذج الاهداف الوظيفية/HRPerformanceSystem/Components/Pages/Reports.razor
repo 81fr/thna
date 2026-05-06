@@ -1,0 +1,269 @@
+@page "/reports"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,HR")]
+@rendermode InteractiveServer
+@using HRPerformanceSystem.Data
+@using HRPerformanceSystem.Models
+@using HRPerformanceSystem.Services
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject CalculationService CalcService
+@inject AIInsightsService AISvc
+
+<div class="page-header">
+    <div>
+        <h1 style="display:flex;align-items:center;gap:8px;"><Icon Name="bar-chart" Size="28" style="color:var(--primary);" /> مركز التحليلات والتقارير</h1>
+        <div class="subtitle">استبصار بيانات الأداء ودعم اتخاذ القرار الاستراتيجي</div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <button class="btn btn-ai" @onclick="GenerateAIAnalysis" disabled="@isGeneratingAI" style="display:inline-flex;align-items:center;gap:6px;">
+            @if (isGeneratingAI) { <Icon Name="brain" Size="16" /> <span>جارٍ التحليل...</span> } else { <Icon Name="brain" Size="16" /> <span>توليد تحليل ذكي</span> }
+        </button>
+        <button class="btn btn-outline" onclick="window.print()" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="printer" Size="16" /> طباعة التقرير</button>
+    </div>
+</div>
+
+@if (showAIAnalysis && aiReport != null)
+{
+    <div class="ai-analysis-card card animate-in" style="border-right: 5px solid #8b5cf6; background: linear-gradient(135deg, rgba(139,92,246,0.05), rgba(14,165,233,0.05)); margin-bottom: 30px;">
+        <div class="card-header" style="border-bottom: 1px solid rgba(139,92,246,0.2);">
+            <h3 style="color: #8b5cf6; display:flex; align-items:center; gap:8px;"><Icon Name="brain" Size="20" /> التحليل التنفيذي الذكي (AI Insight)</h3>
+            <span style="font-size: 0.7rem; color: var(--text-muted);">تم التوليد في: @aiReport.GeneratedAt.ToString("T")</span>
+        </div>
+        <div style="padding: 24px;">
+            <p style="font-size: 1.1rem; line-height: 1.8; color: var(--text-primary); font-weight: 500;">
+                @aiReport.ExecutiveSummary
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px;">
+                <div class="swot-card swot-strengths">
+                    <h4 style="color: #059669; margin-bottom: 10px; display:flex; align-items:center; gap:6px;"><Icon Name="sparkles" Size="16" /> أبرز نقاط القوة</h4>
+                    <ul style="padding-right: 20px; font-size: 0.85rem;">
+                        @foreach (var s in aiReport.Strengths.Take(3)) { <li>@s</li> }
+                    </ul>
+                </div>
+                <div class="swot-card swot-weaknesses">
+                    <h4 style="color: #dc2626; margin-bottom: 10px; display:flex; align-items:center; gap:6px;"><Icon Name="alert-triangle" Size="16" /> مجالات التحسين</h4>
+                    <ul style="padding-right: 20px; font-size: 0.85rem;">
+                        @foreach (var w in aiReport.Weaknesses.Take(3)) { <li>@w</li> }
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">جارٍ تحميل التقارير...</div>
+    </div>
+}
+else
+{
+<!-- التوزيع الإحصائي العام -->
+<div class="stats-grid">
+    <div class="stat-card" style="border-right: 5px solid #10b981;">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;"><Icon Name="sparkles" Size="32" /></div>
+        <div class="stat-info">
+            <h4>فئة التميز (95%+)</h4>
+            <div class="value">@countExcellent</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">كفاءات استثنائية</div>
+        </div>
+    </div>
+    <div class="stat-card" style="border-right: 5px solid #0ea5e9;">
+        <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9;"><Icon Name="check-circle" Size="32" /></div>
+        <div class="stat-info">
+            <h4>فئة جيد جداً (75-94%)</h4>
+            <div class="value">@countGood</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">أداء مستقر ومحقق</div>
+        </div>
+    </div>
+    <div class="stat-card" style="border-right: 5px solid #f59e0b;">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><Icon Name="alert-triangle" Size="32" /></div>
+        <div class="stat-info">
+            <h4>فئة المقبول (50-74%)</h4>
+            <div class="value">@countAverage</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">تحتاج تطوير وتوجيه</div>
+        </div>
+    </div>
+    <div class="stat-card" style="border-right: 5px solid #ef4444;">
+        <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><Icon Name="x-circle" Size="32" /></div>
+        <div class="stat-info">
+            <h4>غير مرضي (أقل من 50%)</h4>
+            <div class="value">@countWeak</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">تحت المراجعة الإدارية</div>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 32px;">
+    <!-- المقارنة بين الإدارات -->
+    <div class="card">
+        <div class="card-header">
+            <h3 style="display:flex;align-items:center;gap:8px;"><Icon Name="bar-chart" Size="20" /> تحليل الأداء المؤسسي حسب الإدارات</h3>
+        </div>
+        @if (deptStats.Any())
+        {
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>الإدارة</th>
+                            <th style="text-align: center;">القوة</th>
+                            <th style="text-align: center;">المتوسط</th>
+                            <th style="text-align: center;">أعلى أداء</th>
+                            <th>المؤشر المرئي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var dept in deptStats)
+                        {
+                            <tr>
+                                <td><strong style="color: var(--text-primary);">@dept.Department</strong></td>
+                                <td style="text-align: center; color: var(--text-muted); font-weight: 700;">@dept.EmployeeCount</td>
+                                <td style="text-align: center;">
+                                    <span style="font-weight: 900; color: @CalcService.GetRatingColor(dept.AvgScore);">
+                                        @dept.AvgScore.ToString("F1")%
+                                    </span>
+                                </td>
+                                <td style="text-align: center; color: var(--success); font-weight: 800;">@dept.MaxScore.ToString("F1")%</td>
+                                <td>
+                                    <div class="progress-bar" style="width: 100px; height: 8px;">
+                                        <div class="fill" style="width: @dept.AvgScore%; background: @CalcService.GetRatingColor(dept.AvgScore);"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state" style="padding: 40px;">
+                <p style="color: var(--text-muted);">لا توجد بيانات متاحة حالياً للمقارنة.</p>
+            </div>
+        }
+    </div>
+
+    <!-- لوحة الشرف -->
+    <div class="card">
+        <div class="card-header">
+            <h3 style="display:flex;align-items:center;gap:8px;"><Icon Name="target" Size="20" /> لوحة الشرف (Top Talents)</h3>
+            <span style="font-size: 0.75rem; color: var(--primary); font-weight: 800;">أعلى 10 موظفين أداءً</span>
+        </div>
+        @if (rankedEmployees.Any())
+        {
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>الموظف</th>
+                            <th style="text-align: center;">النتيجة</th>
+                            <th>المستوى</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (eval, rank) in rankedEmployees.Take(10).Select((e, i) => (e, i + 1)))
+                        {
+                            var score = eval.FinalScore;
+                            <tr>
+                                <td style="text-align: center;">
+                                    @if (rank <= 3)
+                                    {
+                                        <span style="font-size: 1.2rem;">@(rank == 1 ? "🥇" : rank == 2 ? "🥈" : "🥉")</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color: var(--text-muted); font-weight: 700;">@rank</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div style="font-weight: 800; color: var(--text-primary);">@eval.Employee.FullName</div>
+                                    <div style="font-size: 0.7rem; color: var(--text-muted);">@eval.Employee.Department</div>
+                                </td>
+                                <td style="text-align: center;">
+                                    <strong style="color: @CalcService.GetRatingColor(score); font-size: 1.1rem;">@score.ToString("F1")%</strong>
+                                </td>
+                                <td>
+                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; background: @(CalcService.GetRatingColor(score))15; color: @CalcService.GetRatingColor(score); font-size: 0.75rem; font-weight: 800;">
+                                        @CalcService.GetRating(score)
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+}
+
+@code {
+    int countExcellent, countGood, countAverage, countWeak;
+    List<DeptStat> deptStats = new();
+    List<PerformanceEvaluation> rankedEmployees = new();
+    bool isLoading = true;
+    bool isGeneratingAI = false;
+    bool showAIAnalysis = false;
+    AIReport? aiReport;
+
+    async Task GenerateAIAnalysis()
+    {
+        isGeneratingAI = true;
+        StateHasChanged();
+        
+        await Task.Delay(1500); // Simulate deep analysis
+        aiReport = await AISvc.GenerateFullReportAsync();
+        
+        showAIAnalysis = true;
+        isGeneratingAI = false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var Db = DbFactory.CreateDbContext();
+        var evals = await Db.Evaluations
+            .Include(e => e.Employee)
+            .Include(e => e.Goals)
+            .Include(e => e.Competencies)
+            .ToListAsync();
+
+        countExcellent = evals.Count(e => e.FinalScore >= 95);
+        countGood = evals.Count(e => e.FinalScore >= 75 && e.FinalScore < 95);
+        countAverage = evals.Count(e => e.FinalScore >= 50 && e.FinalScore < 75);
+        countWeak = evals.Count(e => e.FinalScore < 50 && e.FinalScore > 0);
+
+        rankedEmployees = evals.OrderByDescending(e => e.FinalScore).ToList();
+
+        deptStats = evals
+            .Where(e => !string.IsNullOrEmpty(e.Employee?.Department))
+            .GroupBy(e => e.Employee!.Department)
+            .Select(g => new DeptStat
+            {
+                Department = g.Key,
+                EmployeeCount = g.Select(e => e.EmployeeId).Distinct().Count(),
+                EvalCount = g.Count(),
+                AvgScore = Math.Round(g.Average(e => e.FinalScore), 1),
+                MaxScore = Math.Round(g.Max(e => e.FinalScore), 1),
+                MinScore = Math.Round(g.Min(e => e.FinalScore), 1)
+            })
+            .OrderByDescending(d => d.AvgScore)
+            .ToList();
+        
+        isLoading = false;
+    }
+
+    class DeptStat
+    {
+        public string Department { get; set; } = "";
+        public int EmployeeCount { get; set; }
+        public int EvalCount { get; set; }
+        public double AvgScore { get; set; }
+        public double MaxScore { get; set; }
+        public double MinScore { get; set; }
+    }
+}

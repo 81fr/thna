@@ -1,0 +1,270 @@
+@page "/Account/Register"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using HRPerformanceSystem.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject ILogger<Register> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>إنشاء حساب جديد | نظام إدارة الأداء</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-card animate-in">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <img src="/images/logo.png" alt="ترؤف" style="max-height: 60px; filter: drop-shadow(0 4px 10px rgba(0,165,155,0.2));" />
+            </div>
+            <h1>إنشاء حساب جديد</h1>
+            <p class="text-muted">انضم إلى نظام إدارة الأداء الوظيفي</p>
+        </div>
+
+        <StatusMessage Message="@Message" />
+
+        <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger mb-3" role="alert" />
+
+            <div class="form-group mb-3">
+                <label for="Input.Email" class="form-label">البريد الإلكتروني</label>
+                <div class="input-with-icon">
+                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control premium-input" autocomplete="username" aria-required="true" placeholder="example@traof.org" />
+                    <i class="bi bi-envelope icon"></i>
+                </div>
+                <ValidationMessage For="() => Input.Email" class="text-danger small" />
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="Input.Password" class="form-label">كلمة المرور</label>
+                <div class="input-with-icon">
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control premium-input" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                    <i class="bi bi-lock icon"></i>
+                </div>
+                <ValidationMessage For="() => Input.Password" class="text-danger small" />
+            </div>
+
+            <div class="form-group mb-4">
+                <label for="Input.ConfirmPassword" class="form-label">تأكيد كلمة المرور</label>
+                <div class="input-with-icon">
+                    <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control premium-input" autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                    <i class="bi bi-shield-check icon"></i>
+                </div>
+                <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger small" />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100 btn-premium-auth">
+                <i class="bi bi-person-plus me-2"></i> إنشاء الحساب
+            </button>
+
+            <div class="auth-divider">
+                <span>أو</span>
+            </div>
+
+            <div class="auth-footer mt-4">
+                <p>لديك حساب بالفعل؟ <a href="Account/Login" class="login-link">تسجيل الدخول</a></p>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<style>
+    .auth-container {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .auth-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 165, 155, 0.1);
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+        width: 100%;
+        max-width: 450px;
+        padding: 40px;
+    }
+    .auth-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .auth-header h1 {
+        font-weight: 900;
+        color: var(--text-primary);
+        font-size: 1.75rem;
+        margin-top: 15px;
+        margin-bottom: 5px;
+    }
+    .premium-input {
+        border-radius: 12px;
+        padding: 12px 15px 12px 45px !important;
+        border: 1.5px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+    .premium-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(0, 165, 155, 0.1);
+    }
+    .input-with-icon {
+        position: relative;
+    }
+    .input-with-icon .icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 1.1rem;
+    }
+    .btn-premium-auth {
+        border-radius: 12px;
+        padding: 14px;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary) 0%, #0d9488 100%);
+        border: none;
+        box-shadow: 0 10px 20px rgba(13, 148, 136, 0.2);
+    }
+    .auth-divider {
+        margin: 25px 0;
+        text-align: center;
+        position: relative;
+    }
+    .auth-divider::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 100%;
+        height: 1px;
+        background: #e2e8f0;
+        z-index: 1;
+    }
+    .auth-divider span {
+        background: #fff;
+        padding: 0 15px;
+        position: relative;
+        z-index: 2;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .auth-footer {
+        text-align: center;
+    }
+    .login-link {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--primary);
+        text-decoration: none;
+    }
+    [data-theme='dark'] .auth-card {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: rgba(255,255,255,0.1);
+    }
+</style>
+
+@code {
+    private IEnumerable<IdentityError>? identityErrors;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    public async Task RegisterUser(EditContext editContext)
+    {
+        var user = CreateUser();
+
+        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        var emailStore = GetEmailStore();
+        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (!result.Succeeded)
+        {
+            identityErrors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User created a new account with password.");
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        if (UserManager.Options.SignIn.RequireConfirmedAccount)
+        {
+            RedirectManager.RedirectTo(
+                "Account/RegisterConfirmation",
+                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+        }
+        else
+        {
+            await SignInManager.SignInAsync(user, isPersistent: false);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+    }
+
+    private ApplicationUser CreateUser()
+    {
+        try
+        {
+            return Activator.CreateInstance<ApplicationUser>();
+        }
+        catch
+        {
+            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
+                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+        }
+    }
+
+    private IUserEmailStore<ApplicationUser> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+        return (IUserEmailStore<ApplicationUser>)UserStore;
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "البريد الإلكتروني مطلوب")]
+        [EmailAddress(ErrorMessage = "البريد الإلكتروني غير صحيح")]
+        [Display(Name = "البريد الإلكتروني")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "كلمة المرور مطلوبة")]
+        [StringLength(100, ErrorMessage = "يجب أن يكون {0} بطول {2} على الأقل و {1} كحد أقصى.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "كلمة المرور")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "تأكيد كلمة المرور")]
+        [Compare("Password", ErrorMessage = "كلمة المرور وتأكيدها غير متطابقين.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}

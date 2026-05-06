@@ -1,0 +1,35 @@
+@using HRPerformanceSystem.Models
+@using HRPerformanceSystem.Services
+@inject IJSRuntime JSRuntime
+
+<div class="card" style="margin-bottom: 24px;">
+    <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <h4 style="font-size: 1.1rem; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 8px;">
+            <Icon Name="trending-up" Size="20" /> @Title
+        </h4>
+        <div style="font-size: 0.75rem; color: var(--primary); font-weight: 800; background: rgba(0, 165, 155, 0.1); padding: 4px 12px; border-radius: 20px;">
+            تحديث حي
+        </div>
+    </div>
+    
+    <div style="position: relative; width: 100%; height: @(Height)px;">
+        <canvas id="@ChartId"></canvas>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "تحليل الأداء";
+    [Parameter] public List<double> Points { get; set; } = new();
+    [Parameter] public List<string> Labels { get; set; } = new();
+    [Parameter] public int Height { get; set; } = 300;
+    
+    private string ChartId = "chart_" + Guid.NewGuid().ToString("N");
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender || Points.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("renderLineChart", ChartId, Labels.ToArray(), Points.ToArray(), "نسبة الأداء (%)");
+        }
+    }
+}

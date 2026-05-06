@@ -1,0 +1,232 @@
+@implements IDisposable
+@inject NavigationManager NavigationManager
+
+<div class="nav-container">
+    <AuthorizeView>
+        <Authorized>
+            <div class="nav-profile-card">
+                <div class="nav-avatar-glow">
+                    <div class="nav-avatar">@context.User.Identity?.Name?.Substring(0, 1).ToUpper()</div>
+                </div>
+                <div class="nav-user-details">
+                    <div class="nav-username">@context.User.Identity?.Name</div>
+                    <div class="nav-role-badge">
+                        @if (context.User.IsInRole("Admin")) { <span class="r-badge admin">مدير النظام</span> }
+                        else if (context.User.IsInRole("HR")) { <span class="r-badge hr">الموارد البشرية</span> }
+                        else if (context.User.IsInRole("Manager")) { <span class="r-badge manager">مدير مباشر</span> }
+                        else { <span class="r-badge employee">موظف</span> }
+                    </div>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+
+    <div class="nav-scroll">
+        <div class="nav-group">
+            <div class="nav-group-title">لوحة التحكم</div>
+            <NavLink class="premium-nav-link" href="" Match="NavLinkMatch.All">
+                <div class="link-icon"><Icon Name="home" Size="20" /></div>
+                <span class="link-text">الرئيسية</span>
+            </NavLink>
+            <AuthorizeView Roles="Admin, HR, Manager">
+                <NavLink class="premium-nav-link" href="institutional-dashboard">
+                    <div class="link-icon"><Icon Name="pie-chart" Size="20" /></div>
+                    <span class="link-text">لوحة القيادة المؤسسية</span>
+                </NavLink>
+            </AuthorizeView>
+        </div>
+
+        <AuthorizeView Roles="Admin, HR, Manager">
+            <div class="nav-group">
+                <div class="nav-group-title">إدارة الأداء</div>
+                <NavLink class="premium-nav-link" href="evaluations">
+                    <div class="link-icon"><Icon Name="clipboard-list" Size="20" /></div>
+                    <span class="link-text">مواثيق الأداء</span>
+                </NavLink>
+                <NavLink class="premium-nav-link" href="employees">
+                    <div class="link-icon"><Icon Name="users" Size="20" /></div>
+                    <span class="link-text">دليل الموظفين</span>
+                </NavLink>
+                <NavLink class="premium-nav-link" href="improvement-plans">
+                    <div class="link-icon"><Icon Name="target" Size="20" /></div>
+                    <span class="link-text">خطط التحسين (PIP)</span>
+                    <span class="mini-ai-tag">AI</span>
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="Employee, Leader">
+            <div class="nav-group">
+                <div class="nav-group-title">بوابتي</div>
+                <NavLink class="premium-nav-link" href="my-plan">
+                    <div class="link-icon"><Icon Name="user" Size="20" /></div>
+                    <span class="link-text">أهدافي وخطتي</span>
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <div class="nav-group">
+            <div class="nav-group-title">الذكاء الاصطناعي</div>
+            <NavLink class="premium-nav-link" href="ai-insights">
+                <div class="link-icon ai-color"><Icon Name="brain" Size="20" /></div>
+                <span class="link-text">رؤى الذكاء الاصطناعي</span>
+                <div class="pulse-dot"></div>
+            </NavLink>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-title">النظام والحساب</div>
+            <NavLink class="premium-nav-link" href="Account/Manage">
+                <div class="link-icon"><Icon Name="settings" Size="20" /></div>
+                <span class="link-text">الإعدادات</span>
+            </NavLink>
+            <form action="Account/Logout" method="post">
+                <AntiforgeryToken />
+                <input type="hidden" name="returnUrl" value="@currentUrl" />
+                <button type="submit" class="premium-nav-link logout-btn" style="width: 100%; border: none; background: none; cursor: pointer; text-align: right;">
+                    <div class="link-icon"><Icon Name="log-out" Size="20" /></div>
+                    <span class="link-text">تسجيل الخروج</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .nav-container { display: flex; flex-direction: column; height: 100%; padding: 0 16px; }
+    .nav-scroll { flex: 1; overflow-y: auto; padding-bottom: 20px; scrollbar-width: none; }
+    .nav-scroll::-webkit-scrollbar { display: none; }
+
+    /* Profile Card */
+    .nav-profile-card {
+        margin: 20px 0 30px 0;
+        padding: 20px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.08);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    .nav-avatar-glow {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: var(--primary);
+        padding: 2px;
+        box-shadow: 0 0 15px rgba(0, 165, 155, 0.3);
+    }
+    .nav-avatar {
+        width: 100%;
+        height: 100%;
+        background: var(--primary-dark);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        color: white;
+        font-size: 1.2rem;
+    }
+    .nav-user-details { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+    .nav-username { font-weight: 800; color: var(--text-primary); font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .r-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
+    .r-badge.admin { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .r-badge.hr { background: rgba(0, 165, 155, 0.1); color: var(--primary); }
+    .r-badge.manager { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .r-badge.employee { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+
+    /* Nav Links */
+    .nav-group { margin-bottom: 24px; }
+    .nav-group-title {
+        font-size: 0.7rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        letter-spacing: 1px;
+        margin-bottom: 12px;
+        padding-right: 12px;
+    }
+    .premium-nav-link {
+        display: flex;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 14px;
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 0.85rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-bottom: 4px;
+        border: 1px solid transparent;
+    }
+    .premium-nav-link:hover {
+        background: rgba(0, 165, 155, 0.08);
+        color: var(--primary);
+        transform: translateX(-5px);
+        border-color: rgba(0, 165, 155, 0.1);
+    }
+    .premium-nav-link.active {
+        background: linear-gradient(135deg, var(--primary) 0%, #0d9488 100%);
+        color: white;
+        box-shadow: 0 8px 16px rgba(13, 148, 136, 0.2);
+    }
+    .link-icon {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 10px;
+        transition: all 0.3s;
+    }
+    .premium-nav-link.active .link-icon { color: white; }
+    .ai-color { color: #8b5cf6; }
+    .mini-ai-tag {
+        margin-right: auto;
+        font-size: 0.55rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #8b5cf6, #3b82f6);
+        color: white;
+        padding: 1px 6px;
+        border-radius: 4px;
+    }
+    .pulse-dot {
+        width: 6px;
+        height: 6px;
+        background: #8b5cf6;
+        border-radius: 50%;
+        margin-right: auto;
+        box-shadow: 0 0 0 rgba(139, 92, 246, 0.4);
+        animation: pulse 2s infinite;
+    }
+    @@keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+    }
+    .logout-btn:hover { background: rgba(239, 68, 68, 0.08); color: #ef4444; border-color: rgba(239, 68, 68, 0.1); }
+</style>
+
+@code {
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
+

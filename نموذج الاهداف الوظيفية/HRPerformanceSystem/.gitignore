@@ -1,0 +1,14 @@
+# .gitignore for HRPerformanceSystem
+bin/
+obj/
+*.db
+*.db-shm
+*.db-wal
+app_log.txt
+lt-url.txt
+lt_link.txt
+lt_output.txt
+tunnel.txt
+tunnel_result.txt
+wwwroot/uploads/evidence/*
+!wwwroot/uploads/evidence/.gitkeep

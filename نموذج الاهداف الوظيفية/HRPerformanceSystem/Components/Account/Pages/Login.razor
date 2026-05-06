@@ -1,0 +1,275 @@
+@page "/Account/Login"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using HRPerformanceSystem.Data
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILogger<Login> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>تسجيل الدخول | نظام إدارة الأداء</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-card animate-in">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <img src="/images/logo.png" alt="ترؤف" style="max-height: 60px; filter: drop-shadow(0 4px 10px rgba(0,165,155,0.2));" />
+            </div>
+            <h1>تسجيل الدخول</h1>
+            <p class="text-muted">نظام إدارة الأداء الوظيفي - جمعية ترؤف</p>
+        </div>
+
+        <StatusMessage Message="@errorMessage" />
+
+        <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger mb-3" role="alert" />
+
+            <div class="form-group mb-3">
+                <label for="Input.Email" class="form-label">اسم المستخدم أو البريد الإلكتروني</label>
+                <div class="input-with-icon">
+                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control premium-input" autocomplete="username" aria-required="true" placeholder="اسم المستخدم أو البريد" />
+                    <i class="bi bi-envelope icon"></i>
+                </div>
+                <ValidationMessage For="() => Input.Email" class="text-danger small" />
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="Input.Password" class="form-label">كلمة المرور</label>
+                <div class="input-with-icon">
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control premium-input" autocomplete="current-password" aria-required="true" placeholder="••••••••" />
+                    <i class="bi bi-lock icon"></i>
+                </div>
+                <ValidationMessage For="() => Input.Password" class="text-danger small" />
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="form-check custom-checkbox">
+                    <InputCheckbox @bind-Value="Input.RememberMe" id="rememberMe" class="form-check-input" />
+                    <label class="form-check-label" for="rememberMe">تذكرني</label>
+                </div>
+                <a href="Account/ForgotPassword" class="forgot-link">نسيت كلمة المرور؟</a>
+            </div>
+
+            <button type="submit" class="w-100 btn btn-lg btn-primary btn-premium-auth">دخول النظام</button>
+
+            <div class="auth-divider">
+                <span>أو</span>
+            </div>
+
+            <div class="d-grid gap-2">
+                <PasskeySubmit Operation="PasskeyOperation.Request" Name="Input.Passkey" EmailName="Input.Email" class="btn btn-outline-secondary btn-passkey">
+                    الدخول باستخدام مفتاح المرور (Passkey)
+                </PasskeySubmit>
+            </div>
+
+            <div class="auth-footer mt-4">
+                <p>ليس لديك حساب؟ <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" class="register-link">سجل الآن</a></p>
+                <a href="Account/ResendEmailConfirmation" class="text-muted small">إعادة إرسال تأكيد البريد</a>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<style>
+    .auth-container {
+        min-height: 80vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .auth-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 165, 155, 0.1);
+        border-radius: 24px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+        width: 100%;
+        max-width: 450px;
+        padding: 40px;
+    }
+    .auth-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .auth-header h1 {
+        font-weight: 900;
+        color: var(--text-primary);
+        font-size: 1.75rem;
+        margin-top: 15px;
+        margin-bottom: 5px;
+    }
+    .premium-input {
+        border-radius: 12px;
+        padding: 12px 15px 12px 45px !important;
+        border: 1.5px solid #e2e8f0;
+        transition: all 0.2s;
+    }
+    .premium-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(0, 165, 155, 0.1);
+    }
+    .input-with-icon {
+        position: relative;
+    }
+    .input-with-icon .icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 1.1rem;
+    }
+    .btn-premium-auth {
+        border-radius: 12px;
+        padding: 14px;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--primary) 0%, #0d9488 100%);
+        border: none;
+        box-shadow: 0 10px 20px rgba(13, 148, 136, 0.2);
+    }
+    .auth-divider {
+        margin: 25px 0;
+        text-align: center;
+        position: relative;
+    }
+    .auth-divider::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 100%;
+        height: 1px;
+        background: #e2e8f0;
+        z-index: 1;
+    }
+    .auth-divider span {
+        background: #fff;
+        padding: 0 15px;
+        position: relative;
+        z-index: 2;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .btn-passkey {
+        border-radius: 12px;
+        padding: 10px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        border: 1.5px solid #e2e8f0;
+    }
+    .auth-footer {
+        text-align: center;
+    }
+    .forgot-link, .register-link {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--primary);
+        text-decoration: none;
+    }
+    .custom-checkbox .form-check-input:checked {
+        background-color: var(--primary);
+        border-color: var(--primary);
+    }
+    [data-theme='dark'] .auth-card {
+        background: rgba(30, 41, 59, 0.95);
+        border-color: rgba(255,255,255,0.1);
+    }
+</style>
+
+@code {
+    private string? errorMessage;
+    private EditContext editContext = default!;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        editContext = new EditContext(Input);
+
+        if (HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            // Clear the existing external cookie to ensure a clean login process
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+    }
+
+    public async Task LoginUser()
+    {
+        if (!string.IsNullOrEmpty(Input.Passkey?.Error))
+        {
+            errorMessage = $"Error: {Input.Passkey.Error}";
+            return;
+        }
+
+        SignInResult result;
+        if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+        {
+            // When performing passkey sign-in, don't perform form validation.
+            result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+        }
+        else
+        {
+            // If doing a password sign-in, validate the form.
+            if (!editContext.Validate())
+            {
+                return;
+            }
+
+            // This doesn't count login failures towards account lockout
+            // To enable password failures to trigger account lockout, set lockoutOnFailure: true
+            result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+        }
+
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("User logged in.");
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.RequiresTwoFactor)
+        {
+            RedirectManager.RedirectTo(
+                "Account/LoginWith2fa",
+                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User account locked out.");
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            errorMessage = "Error: Invalid login attempt.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "اسم المستخدم أو البريد مطلوب")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "كلمة المرور مطلوبة")]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "تذكرني؟")]
+        public bool RememberMe { get; set; }
+
+        public PasskeyInputModel? Passkey { get; set; }
+    }
+}

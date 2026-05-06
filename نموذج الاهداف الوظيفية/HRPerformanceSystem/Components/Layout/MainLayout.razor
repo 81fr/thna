@@ -1,0 +1,228 @@
+@using HRPerformanceSystem.Data
+@using HRPerformanceSystem.Services
+@using HRPerformanceSystem.Components.Shared
+@inject AIInsightsService AISvc
+@inherits LayoutComponentBase
+@inject NotificationService NotifService
+@inject IJSRuntime JSRuntime
+
+<div class="app-container">
+    @if (sidebarOpen)
+    {
+        <div class="sidebar-overlay" @onclick="ToggleSidebar"></div>
+    }
+    
+    <div class="sidebar @(sidebarOpen ? "open" : "")">
+        <div class="sidebar-header">
+            <img src="/images/logo.png" class="sidebar-logo" alt="ترؤف" style="max-width: 180px; filter: brightness(1.2) drop-shadow(0 2px 8px rgba(0,165,155,0.3));" />
+            <div style="text-align: center; margin-top: 10px;">
+                <div style="font-weight: 900; color: var(--text-primary); font-size: 1rem;">نظام إدارة الأداء</div>
+                <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 700;">جمعية ترؤف لرعاية الأيتام</div>
+            </div>
+        </div>
+        
+        <div class="sidebar-nav">
+            <NavMenu />
+        </div>
+        
+        <div style="padding: 16px 24px; border-top: 1px solid var(--border-light); text-align: center;">
+            <div class="ai-badge" style="margin-bottom:8px;justify-content:center;width:100%;background:linear-gradient(135deg,rgba(0,165,155,0.05),rgba(139,92,246,0.05));border-color:var(--border);color:var(--primary);">🧠 مدعوم بالذكاء الاصطناعي</div>
+            <div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600;">
+                نسخة 3.0 AI | @DateTime.Now.Year
+            </div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <!-- Top Header -->
+        <div class="top-header glass-header">
+            <div class="top-header-left">
+                <button class="sidebar-toggle" @onclick="ToggleSidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                    </svg>
+                </button>
+                <div style="margin-right: 20px;">
+                    <GlobalSearch />
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-right: 20px;">
+                    <span style="font-weight: 700;">📅 @DateTime.Now.ToString("dddd", new System.Globalization.CultureInfo("ar-SA"))</span>
+                    <span style="margin: 0 4px;">•</span>
+                    @DateTime.Now.ToString("yyyy/MM/dd")
+                </div>
+            </div>
+            <div class="top-header-right">
+                <!-- Notification Bell -->
+                <div style="position: relative;">
+                    <button class="notification-bell" @onclick="ToggleNotifications">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2zM8 1.918l-.797.161A4.002 4.002 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4.002 4.002 0 0 0-3.203-3.92L8 1.917zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5.002 5.002 0 0 1 13 6c0 .88.32 4.2 1.22 6z"/>
+                        </svg>
+                        @if (unreadCount > 0)
+                        {
+                            <span class="notification-badge">@(unreadCount > 9 ? "9+" : unreadCount.ToString())</span>
+                        }
+                    </button>
+                    
+                    @if (showNotifications)
+                    {
+                        <div class="notification-dropdown">
+                            <div class="notification-dropdown-header">
+                                <span>🔔 الإشعارات</span>
+                                @if (unreadCount > 0)
+                                {
+                                    <button class="btn btn-sm" style="padding: 4px 10px; font-size: 0.7rem; color: var(--primary);" @onclick="MarkAllRead">
+                                        تحديد الكل كمقروء
+                                    </button>
+                                }
+                            </div>
+                            @if (notifications.Any())
+                            {
+                                @foreach (var notif in notifications.Take(8))
+                                {
+                                    <div class="notification-item @(!notif.IsRead ? "unread" : "")" @onclick="() => OnNotifClick(notif)">
+                                        <div style="font-size: 1.2rem; flex-shrink: 0;">
+                                            @GetNotifIcon(notif.Type)
+                                        </div>
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary);">@notif.Title</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@notif.Message</div>
+                                            <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 4px;">@GetTimeAgo(notif.CreatedAt)</div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div style="padding: 30px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                                    لا يوجد إشعارات
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- Theme Button -->
+                <div style="display: flex; gap: 8px; border-right: 1px solid var(--border-light); padding-right: 16px;">
+                    <button class="btn btn-outline btn-sm" @onclick="ToggleTheme" title="تغيير المظهر">@(isDarkMode ? "☀️" : "🌙")</button>
+                </div>
+
+                <!-- User Profile -->
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="user-profile">
+                            <div class="user-info">
+                                <span class="user-name">@context.User.Identity?.Name</span>
+                                <span class="user-role">
+                                    @if (context.User.IsInRole("Admin")) { <text>مدير النظام</text> }
+                                    else if (context.User.IsInRole("HR")) { <text>الموارد البشرية</text> }
+                                    else if (context.User.IsInRole("Manager")) { <text>مدير مباشر</text> }
+                                    else { <text>موظف</text> }
+                                </span>
+                            </div>
+                            <div class="user-avatar">@context.User.Identity?.Name?.Substring(0, 1).ToUpper()</div>
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                         <div class="user-profile">
+                            <div class="user-info">
+                                <span class="user-name">زائر</span>
+                                <span class="user-role">غير مسجل</span>
+                            </div>
+                            <div class="user-avatar">?</div>
+                        </div>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+
+        @Body
+    </main>
+</div>
+
+<AICopilot />
+<ToastContainer />
+
+@if (showNotifications)
+{
+    <div style="position: fixed; inset: 0; z-index: 149;" @onclick="() => showNotifications = false"></div>
+}
+
+@code {
+    bool sidebarOpen = false;
+    bool showNotifications = false;
+    bool isDarkMode = false;
+    int unreadCount = 0;
+    List<HRPerformanceSystem.Models.Notification> notifications = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotifications();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var theme = await JSRuntime.InvokeAsync<string>("themeManager.getTheme");
+            isDarkMode = theme == "dark";
+            StateHasChanged();
+        }
+    }
+
+    async Task ToggleTheme()
+    {
+        var newTheme = await JSRuntime.InvokeAsync<string>("themeManager.toggleTheme");
+        isDarkMode = newTheme == "dark";
+    }
+
+    async Task LoadNotifications()
+    {
+        try
+        {
+            notifications = await NotifService.GetAllAsync(20);
+            unreadCount = await NotifService.GetUnreadCountAsync();
+        }
+        catch { }
+    }
+
+    void ToggleSidebar() => sidebarOpen = !sidebarOpen;
+    void ToggleNotifications() => showNotifications = !showNotifications;
+
+    async Task MarkAllRead()
+    {
+        await NotifService.MarkAllAsReadAsync();
+        await LoadNotifications();
+    }
+
+    async Task OnNotifClick(HRPerformanceSystem.Models.Notification notif)
+    {
+        if (!notif.IsRead)
+        {
+            await NotifService.MarkAsReadAsync(notif.Id);
+            await LoadNotifications();
+        }
+        showNotifications = false;
+    }
+
+    string GetNotifIcon(HRPerformanceSystem.Models.NotificationType type) => type switch
+    {
+        HRPerformanceSystem.Models.NotificationType.Info => "ℹ️",
+        HRPerformanceSystem.Models.NotificationType.Warning => "⚠️",
+        HRPerformanceSystem.Models.NotificationType.Success => "✅",
+        HRPerformanceSystem.Models.NotificationType.ReviewRequest => "📋",
+        HRPerformanceSystem.Models.NotificationType.Approved => "🏆",
+        HRPerformanceSystem.Models.NotificationType.Reminder => "🔔",
+        _ => "📌"
+    };
+
+    string GetTimeAgo(DateTime dt)
+    {
+        var diff = DateTime.Now - dt;
+        if (diff.TotalMinutes < 1) return "الآن";
+        if (diff.TotalMinutes < 60) return $"منذ {(int)diff.TotalMinutes} دقيقة";
+        if (diff.TotalHours < 24) return $"منذ {(int)diff.TotalHours} ساعة";
+        if (diff.TotalDays < 7) return $"منذ {(int)diff.TotalDays} يوم";
+        return dt.ToString("yyyy/MM/dd");
+    }
+}

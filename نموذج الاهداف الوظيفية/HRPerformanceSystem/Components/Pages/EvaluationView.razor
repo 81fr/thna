@@ -1,0 +1,267 @@
+@page "/evaluations/view/{EvalId:int}"
+@attribute [Authorize(Roles = "Admin, HR, Manager, Employee")]
+@rendermode InteractiveServer
+@using HRPerformanceSystem.Data
+@using HRPerformanceSystem.Models
+@using HRPerformanceSystem.Services
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject NavigationManager Nav
+@inject AuditService AuditSvc
+@inject NotificationService NotificationSvc
+@inject CalculationService CalcService
+
+<div class="page-header no-print">
+    <div>
+        <div class="ai-badge" style="margin-bottom: 8px;display:inline-flex;align-items:center;gap:4px;"><Icon Name="document" Size="14" /> عرض ميثاق الأداء</div>
+        <h1>ميثاق أداء: @evaluation.Employee?.FullName</h1>
+        <div class="subtitle">السنة المالية @evaluation.Year | @evaluation.Employee?.JobTitle</div>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+        @if (evaluation.Status != EvaluationStatus.Approved)
+        {
+            <button class="btn btn-ai" @onclick="() => UpdateStatus(EvaluationStatus.Approved)" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="check-circle" Size="16" /> اعتماد الميثاق</button>
+            <button class="btn btn-outline" @onclick="() => UpdateStatus(EvaluationStatus.Draft)" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="corner-up-left" Size="16" /> إرجاع للمسودة</button>
+        }
+        <button class="btn btn-outline" onclick="window.print()" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="printer" Size="16" /> طباعة الميثاق</button>
+        <a href="evaluations/edit/@EvalId" class="btn btn-ai" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="edit" Size="16" /> تعديل الميثاق</a>
+        <a href="evaluations" class="btn btn-outline">العودة للقائمة</a>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+    </div>
+}
+else
+{
+    <div class="charter-layout">
+        <!-- Sidebar: Final Results -->
+        <div class="charter-sidebar">
+            <div class="metric-card" style="border-top: 5px solid var(--primary); text-align: center;">
+                <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 800; margin-bottom: 10px;">النتيجة النهائية العامة</div>
+                <div style="font-size: 3rem; font-weight: 900; color: @CalcService.GetRatingColor(evaluation.FinalScore); line-height: 1;">@evaluation.FinalScore.ToString("F1")%</div>
+                <div style="margin: 15px 0; padding: 6px 16px; background: @(CalcService.GetRatingColor(evaluation.FinalScore))15; color: @CalcService.GetRatingColor(evaluation.FinalScore); border-radius: 30px; font-weight: 900; display: inline-block;">
+                    التقدير: @CalcService.GetRating(evaluation.FinalScore)
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <h4 style="font-size: 0.9rem; margin-bottom: 20px; display:flex; align-items:center; gap:6px;"><Icon Name="file-spreadsheet" Size="18" /> تفاصيل الوزن والنتائج</h4>
+                
+                <div class="summary-item" style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px;">
+                        <span style="font-weight: 700; display:inline-flex; align-items:center; gap:6px;"><Icon Name="target" Size="16" /> الأهداف الوظيفية (65%)</span>
+                        <span style="font-weight: 800;">@CalcService.CalculateGoalsTotal(evaluation).ToString("F1")%</span>
+                    </div>
+                    <div class="weight-indicator">
+                        <div class="weight-fill" style="width: @(CalcService.CalculateGoalsTotal(evaluation)/0.65)%; background: var(--primary);"></div>
+                    </div>
+                </div>
+
+                <div class="summary-item">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px;">
+                        <span style="font-weight: 700; display:inline-flex; align-items:center; gap:6px;"><Icon Name="sparkles" Size="16" /> الجدارات والقيم (35%)</span>
+                        <span style="font-weight: 800;">@CalcService.CalculateCompetenciesTotal(evaluation).ToString("F1")%</span>
+                    </div>
+                    <div class="weight-indicator">
+                        <div class="weight-fill" style="width: @(CalcService.CalculateCompetenciesTotal(evaluation)/0.35)%; background: #8b5cf6;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-card" style="background: rgba(140, 194, 64, 0.05); border: 1px dashed var(--accent);">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div style="font-size: 1.5rem; display:flex;"><Icon Name="clock" Size="24" Color="var(--primary)" /></div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700;">حالة الاعتماد</div>
+                        <div style="font-weight: 800; color: var(--text-primary);">@GetStatusText(evaluation.Status)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content: View mode -->
+        <div class="charter-main">
+            <!-- Summary Info Card -->
+            <div class="card animate-in" style="margin-bottom: 24px;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                    <div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">الموظف</div>
+                        <div style="font-weight: 800; font-size: 1.1rem; color: var(--text-primary);">@evaluation.Employee?.FullName</div>
+                        <div style="font-size: 0.8rem; color: var(--primary); font-weight: 700;">@evaluation.Employee?.EmployeeNumber</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">الإدارة</div>
+                        <div style="font-weight: 800;">@evaluation.Employee?.Department</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">@evaluation.Employee?.JobTitle</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">المراجع المباشر</div>
+                        <div style="font-weight: 800;">@evaluation.ReviewerName</div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">تم التحديث: @(evaluation.UpdatedAt?.ToString("yyyy/MM/dd") ?? evaluation.CreatedAt.ToString("yyyy/MM/dd"))</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Goals Card -->
+            <div class="card animate-in" style="margin-bottom: 24px;">
+                <div class="card-header"><h3 style="display:flex;align-items:center;gap:8px;"><Icon Name="target" Size="20" /> الأهداف الوظيفية (SMART)</h3></div>
+                <div class="table-container">
+                    <table class="charter-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>وصف الهدف الاستراتيجي</th>
+                                <th style="text-align: center; width: 100px;">الوزن</th>
+                                <th style="text-align: center; width: 120px;">التحقيق</th>
+                                <th style="text-align: center; width: 100px;">النتيجة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int gIdx = 1; }
+                            @foreach (var goal in evaluation.Goals.OrderBy(g=>g.DisplayOrder))
+                            {
+                                <tr>
+                                    <td style="color: var(--text-muted); font-weight: 700;">@(gIdx++)</td>
+                                    <td>
+                                        <div style="font-weight: 700; font-size: 0.9rem;">@goal.GoalDescription</div>
+                                    </td>
+                                    <td style="text-align: center; font-weight: 800;">@goal.Weight%</td>
+                                    <td style="text-align: center;">
+                                        @{
+                                            var pct = goal.CalculateCompletionPercentage();
+                                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                                <div style="font-size: 0.75rem; font-weight: 800;">@pct.ToString("F0")%</div>
+                                                <div class="weight-indicator" style="margin: 0;">
+                                                    <div class="weight-fill" style="width: @pct%; background: @CalcService.GetRatingColor(pct);"></div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td style="text-align: center; font-weight: 900; color: var(--primary);">
+                                        @((goal.Weight * goal.CalculateCompletionPercentage() / 100).ToString("F1"))
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Competencies Card -->
+            <div class="card animate-in" style="margin-bottom: 24px;">
+                <div class="card-header"><h3 style="display:flex;align-items:center;gap:8px;"><Icon Name="sparkles" Size="20" /> الجدارات والقيم المؤسسية</h3></div>
+                <div class="table-container">
+                    <table class="charter-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>الجدارة</th>
+                                <th>النوع</th>
+                                <th style="text-align: center; width: 100px;">الوزن</th>
+                                <th style="text-align: center; width: 150px;">التقييم</th>
+                                <th style="text-align: center; width: 100px;">النتيجة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ int cIdx = 1; }
+                            @foreach (var comp in evaluation.Competencies.OrderBy(c=>c.DisplayOrder))
+                            {
+                                <tr>
+                                    <td style="color: var(--text-muted); font-weight: 700;">@(cIdx++)</td>
+                                    <td style="font-weight: 700; font-size: 0.9rem;">@comp.Name</td>
+                                    <td>
+                                        <span style="font-size: 0.7rem; color: var(--text-muted);">@comp.Type</span>
+                                    </td>
+                                    <td style="text-align: center; font-weight: 800;">@comp.Weight%</td>
+                                    <td style="text-align: center;">
+                                        @{
+                                            var avg = comp.CalculateAverageRating();
+                                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                                <div style="font-size: 0.75rem; font-weight: 800;">@avg.ToString("F1") / 5</div>
+                                                <div class="weight-indicator" style="margin: 0;">
+                                                    <div class="weight-fill" style="width: @(avg*20)%; background: #8b5cf6;"></div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </td>
+                                    <td style="text-align: center; font-weight: 900; color: #8b5cf6;">
+                                        @((comp.Weight * comp.CalculateAverageRating() / 5).ToString("F1"))
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    @@media print {
+        .no-print { display: none !important; }
+        .app-container { display: block !important; }
+        .main-content { margin-right: 0 !important; padding: 0 !important; }
+        .sidebar { display: none !important; }
+        .charter-layout { display: block !important; }
+        .charter-sidebar { width: 100% !important; margin-bottom: 20px; }
+        .card { box-shadow: none !important; border: 1px solid #eee !important; }
+    }
+</style>
+
+@code {
+    [Parameter] public int EvalId { get; set; }
+    PerformanceEvaluation evaluation = new();
+    bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var Db = DbFactory.CreateDbContext();
+        var eval = await Db.Evaluations
+            .Include(e => e.Employee)
+            .Include(e => e.Goals)
+            .Include(e => e.Competencies)
+            .FirstOrDefaultAsync(e => e.Id == EvalId);
+
+        if (eval != null)
+        {
+            evaluation = eval;
+        }
+        isLoading = false;
+    }
+
+    string GetStatusText(EvaluationStatus s) => s switch
+    {
+        EvaluationStatus.Draft => "مسودة",
+        EvaluationStatus.InReview => "قيد المراجعة",
+        EvaluationStatus.Approved => "معتمد",
+        EvaluationStatus.Archived => "مؤرشف",
+        _ => ""
+    };
+
+    async Task UpdateStatus(EvaluationStatus newStatus)
+    {
+        using var Db = DbFactory.CreateDbContext();
+        var eval = await Db.Evaluations.FindAsync(EvalId);
+        if (eval != null)
+        {
+            eval.Status = newStatus;
+            eval.UpdatedAt = DateTime.Now;
+            await Db.SaveChangesAsync();
+            evaluation.Status = newStatus;
+
+            await AuditSvc.LogAsync(AuditAction.Update, "Evaluation", EvalId, $"تغيير حالة الميثاق إلى {newStatus}");
+            
+            if (newStatus == EvaluationStatus.Approved)
+            {
+                await NotificationSvc.CreateAsync("✅ تم اعتماد ميثاقك", $"تم اعتماد ميثاق الأداء الخاص بك لعام {eval.Year}", NotificationType.Success, $"/evaluations/view/{EvalId}");
+            }
+            
+            StateHasChanged();
+        }
+    }
+}

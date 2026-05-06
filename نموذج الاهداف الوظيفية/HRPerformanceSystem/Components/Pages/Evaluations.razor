@@ -1,0 +1,217 @@
+@page "/evaluations"
+@attribute [Authorize(Roles = "Admin, HR, Manager")]
+@rendermode InteractiveServer
+@using HRPerformanceSystem.Data
+@using HRPerformanceSystem.Models
+@using HRPerformanceSystem.Services
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject CalculationService CalcService
+@inject AuditService AuditSvc
+@inject NavigationManager Nav
+
+<div class="page-header">
+    <div>
+        <div class="ai-badge" style="margin-bottom: 8px;display:inline-flex;align-items:center;gap:4px;"><Icon Name="clipboard" Size="14" /> دورة كفاءة الأداء</div>
+        <h1>مواثيق وأداء الموظفين</h1>
+        <div class="subtitle">إدارة دورة كفاءة الأداء السنوية للأقسام والإدارات</div>
+    </div>
+    <div style="display: flex; gap: 12px;">
+        <a href="evaluations/new" class="btn btn-ai" style="display:inline-flex;align-items:center;gap:6px;"><Icon Name="plus" Size="16" /> إنشاء ميثاق أداء جديد</a>
+    </div>
+</div>
+
+<div class="stats-grid" style="margin-bottom: 30px;">
+    <div class="premium-stat card">
+        <div class="stat-icon" style="background: rgba(0, 165, 155, 0.1); color: var(--primary);"><Icon Name="clipboard" Size="32" /></div>
+        <div class="stat-info">
+            <div class="label">إجمالي المواثيق</div>
+            <div class="value">@evaluations.Count</div>
+        </div>
+    </div>
+    <div class="premium-stat card">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);"><Icon Name="check-circle" Size="32" /></div>
+        <div class="stat-info">
+            <div class="label">معتمد</div>
+            <div class="value">@evaluations.Count(e => e.Status == EvaluationStatus.Approved)</div>
+        </div>
+    </div>
+    <div class="premium-stat card">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);"><Icon Name="clock" Size="32" /></div>
+        <div class="stat-info">
+            <div class="label">قيد المراجعة</div>
+            <div class="value">@evaluations.Count(e => e.Status == EvaluationStatus.InReview)</div>
+        </div>
+    </div>
+    <div class="premium-stat card">
+        <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;"><Icon Name="trending-up" Size="32" /></div>
+        <div class="stat-info">
+            <div class="label">متوسط الأداء</div>
+            <div class="value">@(evaluations.Any() ? evaluations.Average(e => e.FinalScore).ToString("F1") : "0")%</div>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">جارٍ تحميل المواثيق...</div>
+    </div>
+}
+else
+{
+<div class="card animate-in" style="padding: 0; overflow: hidden; border-radius: 20px;">
+    <div class="table-container">
+        <table class="charter-table">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>الموظف المستهدف</th>
+                    <th>نوع الميثاق والسنة</th>
+                    <th style="text-align: center;">الربع 1</th>
+                    <th style="text-align: center;">الربع 2</th>
+                    <th style="text-align: center;">الربع 3</th>
+                    <th style="text-align: center;">الربع 4</th>
+                    <th style="text-align: center; width: 140px;">التقييم النهائي</th>
+                    <th style="text-align: center;">الحالة</th>
+                    <th style="text-align: center; width: 130px;">الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var (eval, idx) in evaluations.Select((e, i) => (e, i + 1)))
+                {
+                    var final = eval.FinalScore;
+                    <tr>
+                        <td style="color: var(--text-muted); font-weight: 700;">@idx.ToString("D2")</td>
+                        <td>
+                            <div style="font-weight: 800; color: var(--text-primary); font-size: 0.95rem;">@eval.Employee.FullName</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">@eval.Employee.Department • @eval.Employee.EmployeeNumber</div>
+                        </td>
+                        <td>
+                            <span class="status-badge @(eval.Employee.CharterType == CharterType.Leader ? "review" : "active")" style="font-size: 0.65rem; display:inline-flex; align-items:center; gap:4px;">
+                                @if (eval.Employee.CharterType == CharterType.Leader) { <Icon Name="user" Size="12" /> <text>قيادي</text> } else { <Icon Name="wrench" Size="12" /> <text>وظيفي</text> }
+                            </span>
+                            <span style="font-weight: 700; font-size: 0.8rem; margin-right: 8px;">عام @eval.Year</span>
+                        </td>
+                        <td style="text-align: center; font-weight: 700; font-size: 0.85rem;">@FormatScore(eval.Q1Score)</td>
+                        <td style="text-align: center; font-weight: 700; font-size: 0.85rem;">@FormatScore(eval.Q2Score)</td>
+                        <td style="text-align: center; font-weight: 700; font-size: 0.85rem;">@FormatScore(eval.Q3Score)</td>
+                        <td style="text-align: center; font-weight: 700; font-size: 0.85rem;">@FormatScore(eval.Q4Score)</td>
+                        <td style="text-align: center;">
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 2px;">
+                                <div style="font-weight: 900; color: @CalcService.GetRatingColor(final); font-size: 1.1rem;">
+                                    @final.ToString("F1")%
+                                </div>
+                                <div style="font-size: 0.6rem; color: @CalcService.GetRatingColor(final); font-weight: 900; text-transform: uppercase;">
+                                    @CalcService.GetRating(final)
+                                </div>
+                            </div>
+                        </td>
+                        <td style="text-align: center;">
+                            <span class="status-badge @eval.Status.ToString().ToLower()" style="font-size: 0.65rem; display:inline-flex; align-items:center; gap:4px;">
+                                @if(eval.Status == EvaluationStatus.Draft) { <Icon Name="folder" Size="12" /> }
+                                else if(eval.Status == EvaluationStatus.InReview) { <Icon Name="clock" Size="12" /> }
+                                else if(eval.Status == EvaluationStatus.Approved) { <Icon Name="check-circle" Size="12" /> }
+                                else { <Icon Name="archive" Size="12" /> }
+                                @GetStatusText(eval.Status)
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <div style="display: flex; gap: 8px; justify-content: center;">
+                                <a href="evaluations/view/@eval.Id" class="btn btn-outline btn-sm" style="color: var(--info); display:flex; align-items:center; justify-content:center; padding: 4px 8px;" title="عرض التفاصيل"><Icon Name="eye" Size="16" /></a>
+                                <a href="evaluations/edit/@eval.Id" class="btn btn-outline btn-sm" style="display:flex; align-items:center; justify-content:center; padding: 4px 8px;" title="تعديل"><Icon Name="edit" Size="16" /></a>
+                                <a href="/api/export/employee/@eval.Id" class="btn btn-outline btn-sm" style="color: var(--success); display:flex; align-items:center; justify-content:center; padding: 4px 8px;" title="تصدير Excel" target="_blank"><Icon Name="file-spreadsheet" Size="16" /></a>
+                                <button class="btn btn-outline btn-sm" style="color: var(--danger); display:flex; align-items:center; justify-content:center; padding: 4px 8px;" @onclick="() => ConfirmDeleteEval(eval)" title="حذف"><Icon Name="trash" Size="16" /></button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (!evaluations.Any())
+    {
+        <div class="empty-state">
+            <div class="icon"><Icon Name="clipboard" Size="48" Color="var(--text-muted)" /></div>
+            <h4>قائمة المواثيق فارغة</h4>
+            <p>لم يتم إنشاء أي مواثيق أداء لهذا العام بعد.</p>
+            <a href="evaluations/new" class="btn btn-primary" style="margin-top: 16px; display:inline-flex; align-items:center; gap:6px;"><Icon Name="plus" Size="16" /> ابدأ الآن</a>
+        </div>
+    }
+</div>
+}
+
+<!-- Modal تأكيد الحذف -->
+@if (showDeleteConfirm)
+{
+    <div class="modal-backdrop" @onclick="() => showDeleteConfirm = false">
+        <div class="modal" @onclick:stopPropagation="true" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 style="display:flex;align-items:center;gap:8px;color:var(--danger);"><Icon Name="alert-triangle" Size="24" /> تأكيد حذف التقييم</h3>
+            </div>
+            <p>هل أنت متأكد من حذف تقييم <strong>@deletingEval?.Employee?.FullName</strong> لعام @deletingEval?.Year؟</p>
+            <p style="color: var(--danger); font-size: 0.85rem;">سيتم حذف جميع الأهداف والجدارات المرتبطة.</p>
+            <div class="modal-footer">
+                <button class="btn btn-danger" style="display:inline-flex;align-items:center;gap:6px;" @onclick="DeleteEval"><Icon Name="trash" Size="16" /> تأكيد الحذف</button>
+                <button class="btn btn-outline" @onclick="() => showDeleteConfirm = false">إلغاء</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    List<PerformanceEvaluation> evaluations = new();
+    PerformanceEvaluation? deletingEval;
+    bool isLoading = true;
+    bool showDeleteConfirm = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var Db = DbFactory.CreateDbContext();
+        evaluations = await Db.Evaluations
+            .Include(e => e.Employee)
+            .Include(e => e.Goals)
+            .Include(e => e.Competencies)
+            .Include(e => e.AttendanceRecords)
+            .OrderByDescending(e => e.UpdatedAt)
+            .ToListAsync();
+        isLoading = false;
+    }
+
+    string FormatScore(double score) => score > 0 ? $"{score:F1}%" : "—";
+
+    void ConfirmDeleteEval(PerformanceEvaluation eval)
+    {
+        deletingEval = eval;
+        showDeleteConfirm = true;
+    }
+
+    async Task DeleteEval()
+    {
+        if (deletingEval != null)
+        {
+            using var Db = DbFactory.CreateDbContext();
+            var eval = await Db.Evaluations.FindAsync(deletingEval.Id);
+            if (eval != null)
+            {
+                eval.IsDeleted = true;
+                await Db.SaveChangesAsync();
+                await AuditSvc.LogAsync(AuditAction.Delete, "Evaluation", eval.Id, $"حذف تقييم (Soft Delete): {deletingEval.Employee?.FullName} ({eval.Year})");
+                evaluations.RemoveAll(e => e.Id == deletingEval.Id);
+            }
+        }
+        showDeleteConfirm = false;
+        StateHasChanged();
+    }
+
+    string GetStatusText(EvaluationStatus s) => s switch
+    {
+        EvaluationStatus.Draft => "مسودة",
+        EvaluationStatus.InReview => "قيد المراجعة",
+        EvaluationStatus.Approved => "معتمد",
+        EvaluationStatus.Archived => "مؤرشف",
+        _ => ""
+    };
+}

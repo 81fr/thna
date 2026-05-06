@@ -1,0 +1,96 @@
+@using HRPerformanceSystem.Services
+@inject ToastService ToastSvc
+@implements IDisposable
+
+<div class="toast-container">
+    @foreach (var toast in ToastSvc.GetToasts())
+    {
+        <div class="toast-item @toast.Type.ToString().ToLower() animate-in" @key="toast.Id">
+            <div class="toast-icon">
+                @switch (toast.Type)
+                {
+                    case ToastType.Success: <Icon Name="check-circle" Size="20" /> break;
+                    case ToastType.Error: <Icon Name="alert-circle" Size="20" /> break;
+                    case ToastType.Warning: <Icon Name="alert-triangle" Size="20" /> break;
+                    default: <Icon Name="info" Size="20" /> break;
+                }
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">@toast.Title</div>
+                <div class="toast-message">@toast.Message</div>
+            </div>
+            <button class="toast-close" @onclick="() => ToastSvc.Remove(toast.Id)">×</button>
+        </div>
+    }
+</div>
+
+<style>
+    .toast-container {
+        position: fixed;
+        bottom: 30px;
+        left: 30px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        pointer-events: none;
+    }
+    .toast-item {
+        pointer-events: auto;
+        min-width: 300px;
+        max-width: 400px;
+        background: white;
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-light);
+        position: relative;
+    }
+    .toast-item.success { border-right: 4px solid #10b981; }
+    .toast-item.error { border-right: 4px solid #ef4444; }
+    .toast-item.warning { border-right: 4px solid #f59e0b; }
+    .toast-item.info { border-right: 4px solid #3b82f6; }
+
+    .toast-icon { padding-top: 2px; }
+    .toast-item.success .toast-icon { color: #10b981; }
+    .toast-item.error .toast-icon { color: #ef4444; }
+    .toast-item.warning .toast-icon { color: #f59e0b; }
+    .toast-item.info .toast-icon { color: #3b82f6; }
+
+    .toast-title { font-weight: 800; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 2px; }
+    .toast-message { font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4; }
+    
+    .toast-close {
+        background: none; border: none; font-size: 1.2rem; color: var(--text-muted);
+        cursor: pointer; padding: 0 4px; margin-right: auto;
+    }
+    
+    .animate-in { animation: slideInLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    @@keyframes slideInLeft {
+        from { opacity: 0; transform: translateX(-30px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+
+    [data-theme='dark'] .toast-item {
+        background: #1e293b;
+        border-color: rgba(255,255,255,0.05);
+        color: white;
+    }
+    [data-theme='dark'] .toast-title { color: white; }
+    [data-theme='dark'] .toast-message { color: #94a3b8; }
+</style>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ToastSvc.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ToastSvc.OnChange -= StateHasChanged;
+    }
+}

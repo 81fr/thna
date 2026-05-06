@@ -1,0 +1,81 @@
+@using Microsoft.AspNetCore.Identity
+@using HRPerformanceSystem.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+
+<div class="manage-nav-list">
+    <NavLink class="manage-nav-item" href="Account/Manage" Match="NavLinkMatch.All">
+        <i class="bi bi-person me-2"></i> الملف الشخصي
+    </NavLink>
+    <NavLink class="manage-nav-item" href="Account/Manage/Email">
+        <i class="bi bi-envelope me-2"></i> البريد الإلكتروني
+    </NavLink>
+    <NavLink class="manage-nav-item" href="Account/Manage/ChangePassword">
+        <i class="bi bi-key me-2"></i> كلمة المرور
+    </NavLink>
+    @if (hasExternalLogins)
+    {
+        <NavLink class="manage-nav-item" href="Account/Manage/ExternalLogins">
+            <i class="bi bi-box-arrow-in-right me-2"></i> الحسابات المرتبطة
+        </NavLink>
+    }
+    <NavLink class="manage-nav-item" href="Account/Manage/TwoFactorAuthentication">
+        <i class="bi bi-shield-lock me-2"></i> المصادقة الثنائية
+    </NavLink>
+    <NavLink class="manage-nav-item" href="Account/Manage/Passkeys">
+        <i class="bi bi-pass me-2"></i> مفاتيح المرور
+    </NavLink>
+    <NavLink class="manage-nav-item" href="Account/Manage/PersonalData">
+        <i class="bi bi-database me-2"></i> البيانات الشخصية
+    </NavLink>
+</div>
+
+<style>
+    .manage-nav-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        padding: 15px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .manage-nav-item {
+        display: flex;
+        align-items: center;
+        padding: 14px 18px;
+        border-radius: 14px;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-weight: 700;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+    }
+    .manage-nav-item:hover {
+        background: rgba(0, 165, 155, 0.08);
+        color: var(--primary);
+        transform: translateX(-5px);
+        border-color: rgba(0, 165, 155, 0.1);
+    }
+    .manage-nav-item.active {
+        background: linear-gradient(135deg, var(--primary) 0%, #0d9488 100%);
+        color: white;
+        box-shadow: 0 8px 16px rgba(13, 148, 136, 0.2);
+    }
+    .manage-nav-item i {
+        font-size: 1.2rem;
+        margin-left: 12px;
+    }
+    [data-theme='dark'] .manage-nav-list {
+        background: rgba(15, 23, 42, 0.2);
+    }
+</style>
+
+@code {
+    private bool hasExternalLogins;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+    }
+}

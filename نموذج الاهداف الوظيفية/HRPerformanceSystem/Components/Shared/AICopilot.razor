@@ -1,0 +1,305 @@
+@using HRPerformanceSystem.Services
+@inject AIInsightsService AISvc
+@inject IJSRuntime JS
+
+<div class="ai-copilot-container @(isOpen ? "open" : "")">
+    <!-- Chat Button -->
+    <button class="ai-chat-trigger" @onclick="ToggleChat">
+        <div class="trigger-icon" style="display:flex;"><Icon Name="brain" Size="32" Color="white" /></div>
+        <div class="trigger-pulse"></div>
+    </button>
+
+    <!-- Chat Window -->
+    <div class="ai-chat-window">
+        <div class="chat-header">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="header-icon" style="display:flex;"><Icon Name="brain" Size="20" Color="white" /></div>
+                <div>
+                    <div class="header-title">المساعد الذكي (ترؤف)</div>
+                    <div class="header-status">نشط الآن</div>
+                </div>
+            </div>
+            <button class="close-chat" @onclick="ToggleChat">✕</button>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            <div class="message system">
+                مرحباً بك! أنا مساعدك الذكي في نظام ترؤف. كيف يمكنني خدمتك اليوم؟
+            </div>
+            @foreach (var msg in messages)
+            {
+                <div class="message @(msg.IsUser ? "user" : "ai")">
+                    @msg.Text
+                </div>
+            }
+            @if (isTyping)
+            {
+                <div class="message ai typing">
+                    <span>.</span><span>.</span><span>.</span>
+                </div>
+            }
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" placeholder="اسألني عن أداء الموظفين..." 
+                   @bind="userInput" @onkeyup="HandleKeyUp" />
+            <button class="send-btn" @onclick="SendMessage">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .ai-copilot-container {
+        position: fixed;
+        bottom: 30px;
+        left: 30px;
+        z-index: 1000;
+        direction: rtl;
+    }
+
+    .ai-chat-trigger {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #0ea5e9);
+        border: none;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
+        position: relative;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .ai-chat-trigger:hover {
+        transform: scale(1.1) rotate(5deg);
+        box-shadow: 0 15px 35px rgba(139, 92, 246, 0.6);
+    }
+
+    .trigger-icon {
+        font-size: 1.8rem;
+        z-index: 2;
+    }
+
+    .trigger-pulse {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: inherit;
+        opacity: 0.5;
+        animation: chat-pulse 2s infinite;
+        z-index: 1;
+    }
+
+    @@keyframes chat-pulse {
+        0% { transform: scale(1); opacity: 0.5; }
+        100% { transform: scale(1.5); opacity: 0; }
+    }
+
+    .ai-chat-window {
+        position: absolute;
+        bottom: 80px;
+        left: 0;
+        width: 380px;
+        height: 500px;
+        background: white;
+        border-radius: 24px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        opacity: 0;
+        transform: translateY(20px) scale(0.9);
+        pointer-events: none;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transform-origin: bottom left;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .ai-copilot-container.open .ai-chat-window {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: all;
+    }
+
+    .chat-header {
+        padding: 20px;
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .header-icon {
+        width: 40px;
+        height: 40px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+
+    .header-title { font-weight: 800; font-size: 0.95rem; }
+    .header-status { font-size: 0.7rem; opacity: 0.7; }
+
+    .close-chat {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 1.2rem;
+        cursor: pointer;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+    }
+
+    .close-chat:hover { opacity: 1; }
+
+    .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background: #f8fafc;
+    }
+
+    .message {
+        max-width: 85%;
+        padding: 12px 16px;
+        border-radius: 18px;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        position: relative;
+        animation: msg-in 0.3s ease-out both;
+    }
+
+    @@keyframes msg-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .message.system {
+        align-self: center;
+        background: #e2e8f0;
+        color: #475569;
+        text-align: center;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 12px;
+    }
+
+    .message.user {
+        align-self: flex-start;
+        background: #0ea5e9;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .message.ai {
+        align-self: flex-end;
+        background: white;
+        color: #1e293b;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .message.typing span {
+        animation: typing 1s infinite;
+        display: inline-block;
+        margin: 0 2px;
+    }
+
+    .message.typing span:nth-child(2) { animation-delay: 0.2s; }
+    .message.typing span:nth-child(3) { animation-delay: 0.4s; }
+
+    @@keyframes typing { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+    .chat-input-area {
+        padding: 15px;
+        background: white;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        gap: 10px;
+    }
+
+    .chat-input-area input {
+        flex: 1;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 10px 15px;
+        font-size: 0.85rem;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .chat-input-area input:focus { border-color: #0ea5e9; }
+
+    .send-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #0ea5e9;
+        color: white;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s;
+    }
+
+    .send-btn:hover { transform: scale(1.05); }
+</style>
+
+@code {
+    bool isOpen = false;
+    bool isTyping = false;
+    string userInput = "";
+    List<ChatMessage> messages = new();
+
+    void ToggleChat() => isOpen = !isOpen;
+
+    async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(userInput)) return;
+
+        var userMsg = userInput;
+        userInput = "";
+        messages.Add(new ChatMessage { Text = userMsg, IsUser = true });
+        
+        isTyping = true;
+        StateHasChanged();
+
+        // Simulate AI thinking
+        await Task.Delay(800);
+        
+        var response = await AISvc.ChatWithAIAsync(userMsg);
+        messages.Add(new ChatMessage { Text = response, IsUser = false });
+        
+        isTyping = false;
+        StateHasChanged();
+        
+        // Auto scroll (optional via JS)
+        await JS.InvokeVoidAsync("eval", "document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight");
+    }
+
+    void HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") SendMessage();
+    }
+
+    class ChatMessage
+    {
+        public string Text { get; set; } = "";
+        public bool IsUser { get; set; }
+    }
+}

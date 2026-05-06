@@ -1,0 +1,238 @@
+@page "/"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using HRPerformanceSystem.Data
+@using HRPerformanceSystem.Models
+@using HRPerformanceSystem.Services
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject CalculationService CalcService
+@inject AIInsightsService AISvc
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+
+@if (isLoading)
+{
+    <div class="skeleton-container" style="padding: 40px;">
+        <div class="skeleton-header" style="height: 250px; background: #e2e8f0; border-radius: 30px; margin-bottom: 40px; animation: pulse 1.5s infinite;"></div>
+        <div class="skeleton-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;">
+            <div class="skeleton-card" style="height: 120px; background: #f1f5f9; border-radius: 20px; animation: pulse 1.5s infinite;"></div>
+            <div class="skeleton-card" style="height: 120px; background: #f1f5f9; border-radius: 20px; animation: pulse 1.5s infinite;"></div>
+            <div class="skeleton-card" style="height: 120px; background: #f1f5f9; border-radius: 20px; animation: pulse 1.5s infinite;"></div>
+            <div class="skeleton-card" style="height: 120px; background: #f1f5f9; border-radius: 20px; animation: pulse 1.5s infinite;"></div>
+        </div>
+    </div>
+}
+else
+{
+<AuthorizeView Roles="Admin, HR, Manager">
+    <Authorized>
+        <div class="welcome-banner-premium">
+            <div class="banner-content">
+                <div class="banner-badge">نظام إدارة الأداء v3.1</div>
+                <h1>@AISvc.GetSmartGreeting() يا @(context.User.Identity?.Name?.Split(' ')[0])</h1>
+                <p>@AISvc.GetDailyTip()</p>
+                <div class="banner-actions">
+                    <a href="evaluations/new" class="premium-btn primary">
+                        <Icon Name="plus" Size="20" />
+                        <span>إعداد ميثاق أداء</span>
+                    </a>
+                    <a href="ai-insights" class="premium-btn glass">
+                        <Icon Name="brain" Size="20" />
+                        <span>رؤى الذكاء الاصطناعي</span>
+                    </a>
+                </div>
+            </div>
+            <div class="banner-illustration">
+                <div class="orb"></div>
+                <div class="orb-small"></div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card primary">
+                <div class="stat-icon"><Icon Name="users" Size="28" /></div>
+                <div class="stat-info">
+                    <h4>إجمالي الموظفين</h4>
+                    <div class="value">@totalEmployees</div>
+                </div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-icon"><Icon Name="check-circle" Size="28" /></div>
+                <div class="stat-info">
+                    <h4>المواثيق المعتمدة</h4>
+                    <div class="value">@approvedEvals</div>
+                </div>
+            </div>
+            <div class="stat-card orange">
+                <div class="stat-icon"><Icon Name="clock" Size="28" /></div>
+                <div class="stat-info">
+                    <h4>قيد المراجعة</h4>
+                    <div class="value">@pendingEvals</div>
+                </div>
+            </div>
+            <div class="stat-card blue">
+                <div class="stat-icon"><Icon Name="trending-up" Size="28" /></div>
+                <div class="stat-info">
+                    <h4>متوسط الأداء</h4>
+                    <div class="value">@avgScore%</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 30px; margin-top: 30px;">
+            <!-- Activity Feed -->
+            <div class="card pulse-card">
+                <div class="card-header">
+                    <h3 style="display:flex;align-items:center;gap:8px;"><Icon Name="activity" Size="20" /> نبض الأداء</h3>
+                    <span class="live-dot"></span>
+                </div>
+                <div class="activity-feed">
+                    @foreach (var eval in recentEvals.Take(4))
+                    {
+                        <div class="activity-item">
+                            <div class="activity-time">@GetTimeAgo(eval.UpdatedAt ?? eval.CreatedAt)</div>
+                            <div class="activity-text">تم تحديث ميثاق <strong>@eval.Employee.FullName</strong></div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Main Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 style="display:flex;align-items:center;gap:8px;"><Icon Name="clipboard" Size="20" /> متابعة التقييمات</h3>
+                    <a href="evaluations" class="btn-sm-link">عرض الكل</a>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead><tr><th>الموظف</th><th>الحالة</th><th>النتيجة</th></tr></thead>
+                        <tbody>
+                            @foreach (var eval in recentEvals.Take(5))
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:700;">@eval.Employee.FullName</div>
+                                        <div style="font-size:0.7rem; color:var(--text-muted);">@eval.Employee.Department</div>
+                                    </td>
+                                    <td><span class="status-badge @eval.Status.ToString().ToLower()">@GetStatusText(eval.Status)</span></td>
+                                    <td style="font-weight:900; color:@CalcService.GetRatingColor(eval.FinalScore)">@eval.FinalScore.ToString("F1")%</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Top Performers -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 style="display:flex;align-items:center;gap:8px;"><Icon Name="award" Size="20" /> الأعلى أداءً</h3>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    @foreach (var emp in topEmployees.Take(3))
+                    {
+                        <div class="top-emp-item">
+                            <div class="emp-avatar">@emp.Employee.FullName.Substring(0,1)</div>
+                            <div style="flex:1;">
+                                <div class="emp-name">@emp.Employee.FullName</div>
+                                <div class="emp-score">@emp.FinalScore.ToString("F1")%</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+}
+
+@code {
+    int totalEmployees, approvedEvals, pendingEvals;
+    double avgScore;
+    List<PerformanceEvaluation> recentEvals = new();
+    List<PerformanceEvaluation> topEmployees = new();
+    bool isLoading = true;
+    int countExcellent, countGood, countAverage, countWeak;
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var Db = DbFactory.CreateDbContext();
+        var allEvals = await Db.Evaluations
+            .Include(e => e.Employee)
+            .Include(e => e.Goals)
+            .Include(e => e.Competencies)
+            .ToListAsync();
+
+        totalEmployees = await Db.Employees.CountAsync();
+        approvedEvals = allEvals.Count(e => e.Status == EvaluationStatus.Approved);
+        pendingEvals = allEvals.Count(e => e.Status == EvaluationStatus.InReview);
+        avgScore = allEvals.Any() ? Math.Round(allEvals.Average(e => e.FinalScore), 1) : 0;
+        
+        recentEvals = allEvals.OrderByDescending(e => e.UpdatedAt ?? e.CreatedAt).ToList();
+        topEmployees = allEvals.OrderByDescending(e => e.FinalScore).ToList();
+
+        countExcellent = allEvals.Count(e => e.FinalScore >= 95);
+        countGood = allEvals.Count(e => e.FinalScore >= 75 && e.FinalScore < 95);
+        countAverage = allEvals.Count(e => e.FinalScore >= 50 && e.FinalScore < 75);
+        countWeak = allEvals.Count(e => e.FinalScore < 50 && e.FinalScore > 0);
+
+        isLoading = false;
+    }
+
+    string GetStatusText(EvaluationStatus s) => s switch {
+        EvaluationStatus.Draft => "مسودة",
+        EvaluationStatus.InReview => "قيد المراجعة",
+        EvaluationStatus.Approved => "معتمد",
+        _ => "مؤرشف"
+    };
+
+    string GetTimeAgo(DateTime dt) {
+        var span = DateTime.Now - dt;
+        if (span.TotalDays > 1) return $"منذ {Math.Floor(span.TotalDays)} يوم";
+        if (span.TotalHours > 1) return $"منذ {Math.Floor(span.TotalHours)} ساعة";
+        return $"منذ {Math.Floor(span.TotalMinutes)} دقيقة";
+    }
+}
+
+<style>
+    .welcome-banner-premium {
+        background: linear-gradient(135deg, #00897b 0%, #00695c 40%, #0d47a1 100%);
+        border-radius: 30px; padding: 50px; color: white; position: relative; overflow: hidden; margin-bottom: 40px;
+        display: flex; justify-content: space-between; align-items: center; box-shadow: 0 20px 40px rgba(0, 105, 92, 0.2);
+    }
+    .banner-badge { background: rgba(255, 255, 255, 0.15); padding: 6px 16px; border-radius: 100px; font-size: 0.75rem; font-weight: 800; margin-bottom: 20px; display: inline-block; }
+    .welcome-banner-premium h1 { font-size: 2.2rem; font-weight: 900; margin-bottom: 10px; }
+    .welcome-banner-premium p { font-size: 1rem; opacity: 0.9; }
+    .premium-btn { display: flex; align-items: center; gap: 10px; padding: 12px 24px; border-radius: 14px; font-weight: 800; text-decoration: none; transition: 0.3s; margin-top: 20px; }
+    .premium-btn.primary { background: white; color: #00695c; }
+    .premium-btn.glass { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.2); }
+    .banner-actions { display: flex; gap: 12px; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+    .stat-card { background: white; border-radius: 20px; padding: 20px; display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-light); }
+    .stat-icon { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; }
+    .stat-card.primary .stat-icon { background: rgba(0, 165, 155, 0.1); color: var(--primary); }
+    .stat-card.green .stat-icon { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .stat-card.orange .stat-icon { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+    .stat-card.blue .stat-icon { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .stat-info h4 { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px; }
+    .stat-info .value { font-size: 1.4rem; font-weight: 900; }
+
+    .pulse-card { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); }
+    .live-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; animation: pulse-red 2s infinite; }
+    @@keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+    .activity-feed { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+    .activity-item { padding-right: 10px; border-right: 2px solid var(--border-light); }
+    .activity-time { font-size: 0.6rem; color: var(--text-muted); }
+    .activity-text { font-size: 0.75rem; color: var(--text-secondary); }
+
+    .top-emp-item { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg-hover); border-radius: 12px; }
+    .emp-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.8rem; }
+    .emp-name { font-weight: 700; font-size: 0.8rem; }
+    .emp-score { font-weight: 900; color: var(--primary); font-size: 0.85rem; }
+    .btn-sm-link { font-size: 0.75rem; color: var(--primary); text-decoration: none; font-weight: 700; }
+
+    @@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+    .orb { position: absolute; top: -50px; right: -50px; width: 250px; height: 250px; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); border-radius: 50%; }
+</style>

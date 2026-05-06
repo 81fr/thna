@@ -1,0 +1,42 @@
+@inherits LayoutComponentBase
+@layout HRPerformanceSystem.Components.Layout.MainLayout
+
+<div class="manage-container animate-in">
+    <div class="manage-header mb-4">
+        <h1>إعدادات الحساب</h1>
+        <p class="text-muted">إدارة بياناتك الشخصية وإعدادات الأمان</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-3">
+            <div class="manage-nav-card">
+                <ManageNavMenu />
+            </div>
+        </div>
+        <div class="col-lg-9">
+            <div class="manage-content-card">
+                @Body
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .manage-container {
+        padding: 20px 0;
+    }
+    .manage-header h1 {
+        font-weight: 800;
+        color: var(--text-primary);
+    }
+    .manage-nav-card, .manage-content-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: var(--shadow-sm);
+    }
+    .manage-content-card {
+        min-height: 400px;
+    }
+</style>

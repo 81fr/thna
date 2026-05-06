@@ -1,0 +1,92 @@
+@page "/admin/cleanup"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using HRPerformanceSystem.Data
+@using HRPerformanceSystem.Models
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<div class="page-header">
+    <div>
+        <h1>🧹 تنظيف قاعدة البيانات</h1>
+        <div class="subtitle">إزالة الأهداف والجدارات المكررة وتصحيح الحسابات</div>
+    </div>
+</div>
+
+<div class="card">
+    @if (isProcessing)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>جاري التنظيف... يرجى الانتظار</p>
+        </div>
+    }
+    else if (isDone)
+    {
+        <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 3rem; margin-bottom: 20px;">✅</div>
+            <h3>تم التنظيف بنجاح</h3>
+            <p>تم حذف @deletedGoals أهداف مكررة و @deletedComps جدارات مكررة.</p>
+            <a href="evaluations" class="btn btn-primary" style="margin-top: 20px;">العودة للمواثيق</a>
+        </div>
+    }
+    else
+    {
+        <div style="padding: 20px;">
+            <p>سيقوم هذا الإجراء بالبحث عن كافة الأهداف والجدارات التي تحمل نفس الوصف داخل نفس الميثاق وحذف المكرر منها، مع الحفاظ على نسخة واحدة فقط.</p>
+            <div style="background: rgba(245, 158, 11, 0.1); border-right: 4px solid var(--warning); padding: 15px; margin: 20px 0;">
+                ⚠️ <strong>تنبيه:</strong> ينصح بإجراء نسخة احتياطية لقاعدة البيانات قبل البدء.
+            </div>
+            <button class="btn btn-danger" @onclick="StartCleanup">🚀 ابدأ عملية التنظيف الآن</button>
+        </div>
+    }
+</div>
+
+@code {
+    bool isProcessing = false;
+    bool isDone = false;
+    int deletedGoals = 0;
+    int deletedComps = 0;
+
+    async Task StartCleanup()
+    {
+        isProcessing = true;
+        StateHasChanged();
+
+        using var Db = DbFactory.CreateDbContext();
+        
+        var evaluations = await Db.Evaluations
+            .Include(e => e.Goals)
+            .Include(e => e.Competencies)
+            .ToListAsync();
+
+        foreach (var eval in evaluations)
+        {
+            // Clean Goals
+            var goalGroups = eval.Goals.GroupBy(g => g.GoalDescription).Where(g => g.Count() > 1);
+            foreach (var group in goalGroups)
+            {
+                var toRemove = group.Skip(1).ToList();
+                Db.Goals.RemoveRange(toRemove);
+                deletedGoals += toRemove.Count;
+            }
+
+            // Clean Competencies
+            var compGroups = eval.Competencies.GroupBy(c => c.Name).Where(g => g.Count() > 1);
+            foreach (var group in compGroups)
+            {
+                var toRemove = group.Skip(1).ToList();
+                Db.Competencies.RemoveRange(toRemove);
+                deletedComps += toRemove.Count;
+            }
+        }
+
+        if (deletedGoals > 0 || deletedComps > 0)
+        {
+            await Db.SaveChangesAsync();
+        }
+
+        isProcessing = false;
+        isDone = true;
+    }
+}

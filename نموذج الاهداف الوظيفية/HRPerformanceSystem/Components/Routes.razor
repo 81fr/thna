@@ -1,0 +1,42 @@
+@using HRPerformanceSystem.Components.Account.Shared
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                @if (context.User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="unauthorized-page animate-in">
+                        <div class="card glass-card error-container">
+                            <div class="error-icon">🚫</div>
+                            <h2>وصول غير مصرح به</h2>
+                            <p>عذراً، ليس لديك الصلاحيات الكافية للوصول إلى هذه الصفحة.</p>
+                            <div class="user-debug">
+                                <span>المستخدم الحالي: <strong>@context.User.Identity.Name</strong></span>
+                            </div>
+                            <div class="error-actions">
+                                <a href="/" class="btn btn-primary">العودة للرئيسية</a>
+                                <form action="Account/Logout" method="post" style="display: inline;">
+                                    <AntiforgeryToken />
+                                    <button type="submit" class="btn btn-outline">تسجيل الخروج والتبديل</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <RedirectToLogin />
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+</Router>
+
+<style>
+    .unauthorized-page { display: flex; align-items: center; justify-content: center; min-height: 80vh; padding: 20px; }
+    .error-container { max-width: 500px; padding: 48px; text-align: center; }
+    .error-icon { font-size: 4rem; margin-bottom: 24px; }
+    .user-debug { margin: 24px 0; padding: 12px; background: var(--bg-app); border-radius: 12px; font-size: 0.85rem; color: var(--text-secondary); }
+    .error-actions { display: flex; gap: 12px; justify-content: center; margin-top: 32px; }
+</style>
